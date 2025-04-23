@@ -1,0 +1,7 @@
+click>=8.0
+psutil>=7.0.0
+anyio>=4.0
+msgspec>=0.19
+
+[:python_version < "3.11"]
+tomli>=2.0.0

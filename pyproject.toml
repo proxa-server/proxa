@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "proxa"
+version = "0.1.0"
+authors = [
+  # Asegúrate de poner tu nombre y email aquí
+  { name="Jearel Alcantara", email="jeasoft@gmail.com" },
+]
+description = "Un autoscaler inteligente para servidores WSGI/ASGI."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License", # O la licencia que prefieras
+    "Operating System :: OS Independent",
+    "Topic :: System :: Monitoring",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+dependencies = [
+    "click>=8.0",
+    "psutil>=7.0.0",
+    "anyio>=4.0",
+    "msgspec>=0.19", # Añadido para validación/serialización rápida
+    "tomli>=2.0.0;python_version<'3.11'", # Solo se instalará en Python < 3.11
+]
+# Añadiremos dependencias de servidores (uvicorn, etc.) más adelante
+
+
+[project.urls]
+# Reemplaza con las URLs de tu repositorio
+"Homepage" = "https://github.com/jesuslarag/proxa"
+"Bug Tracker" = "https://github.com/jesuslarag/proxa/issues"
+
+# Define el comando 'proxa' que ejecutará la función 'main' en cli.py
+[project.scripts]
+proxa = "proxa.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"] # Busca paquetes dentro de src
