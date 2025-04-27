@@ -17,7 +17,9 @@ An intelligent autoscaler for ASGI/WSGI servers with built-in health monitoring.
 ## Installation
 
 ```bash
-pip install proxa
+git clone https://github.com/proxa-server/proxa.git
+cd proxa
+pip install .
 ```
 
 ## Quick Start
