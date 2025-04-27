@@ -4,6 +4,7 @@ import time
 import random
 import httpx
 import os
+import psutil  # Añadir esta importación
 from typing import Dict, List, Optional, Set
 import msgspec
 from proxa.types import ProxyStats, ProxyConfig, RoutingTable
@@ -68,35 +69,44 @@ class ProxyServer:
         previous_urls = self.workers_urls.copy()
         self.workers_urls = set()
         
-        if not self.active_workers:
-            logger.warning("No hay workers activos para sincronizar")
-            return
-        
         # Contador de workers activos
         active_count = 0
         
-        for pid, worker in list(self.active_workers.items()):
-            try:
-                # Verificar si el worker está activo
-                is_active = False
-                if hasattr(worker, 'psutil_process') and worker.psutil_process:
-                    try:
-                        is_active = worker.psutil_process.is_running()
-                    except Exception:
-                        is_active = False
-                
-                # Si el worker no está activo, omitirlo
-                if not is_active and hasattr(worker, 'psutil_process') and worker.psutil_process:
-                    continue
-                
-                # Agregar el worker a la lista de URLs disponibles
-                if hasattr(worker, 'port'):
-                    worker_url = f"http://127.0.0.1:{worker.port}"
-                    self.workers_urls.add(worker_url)
-                    active_count += 1
-                    logger.debug(f"Worker sincronizado: {worker_url} (PID: {pid})")
-            except Exception as e:
-                logger.warning(f"Error al sincronizar worker {pid}: {e}")
+        # Primero, verificar workers en active_workers
+        if self.active_workers:
+            for pid, worker in list(self.active_workers.items()):
+                try:
+                    # Verificar si el worker está activo
+                    is_active = False
+                    if hasattr(worker, 'psutil_process') and worker.psutil_process:
+                        try:
+                            is_active = worker.psutil_process.is_running()
+                            # Verificar también si el proceso está respondiendo (no zombie)
+                            if is_active and worker.psutil_process.status() == psutil.STATUS_ZOMBIE:
+                                is_active = False
+                        except Exception:
+                            is_active = False
+                    
+                    # Si el worker no está activo, omitirlo
+                    if not is_active and hasattr(worker, 'psutil_process') and worker.psutil_process:
+                        continue
+                    
+                    # Agregar el worker a la lista de URLs disponibles
+                    if hasattr(worker, 'port'):
+                        worker_url = f"http://127.0.0.1:{worker.port}"
+                        self.workers_urls.add(worker_url)
+                        active_count += 1
+                        logger.debug(f"Worker sincronizado: {worker_url} (PID: {pid})")
+                except Exception as e:
+                    logger.warning(f"Error al sincronizar worker {pid}: {e}")
+        
+        # Si no se encontraron workers en active_workers, buscar en puertos conocidos
+        if not self.workers_urls:
+            for port in range(8001, 8011):
+                worker_url = f"http://127.0.0.1:{port}"
+                # No verificamos conectividad aquí para evitar bloqueos
+                self.workers_urls.add(worker_url)
+                logger.debug(f"Worker añadido por puerto conocido: {worker_url}")
         
         # Verificar si se agregaron nuevos workers o se eliminaron algunos
         added = self.workers_urls - previous_urls
@@ -119,23 +129,32 @@ class ProxyServer:
         self.last_request_time = time.time()
         
         try:
-            # Leer datos del cliente
-            request_data = await client.receive()
-            
-            # Seleccionar worker
-            worker_url = await self.select_worker()
-            if not worker_url:
-                logger.warning("No hay workers disponibles para manejar la solicitud")
-                response = b"HTTP/1.1 503 Service Unavailable\r\nContent-Length: 25\r\n\r\nNo hay workers disponibles.\n"
-                await client.send(response)
-                return
-            
-            # Reenviar solicitud al worker
-            response_data = await self.forward_request(request_data, worker_url)
-            
-            # Enviar respuesta al cliente
-            await client.send(response_data)
-            
+            # Establecer un timeout para la conexión del cliente
+            with anyio.move_on_after(30.0):  # 30 segundos de timeout
+                # Leer datos del cliente
+                request_data = await client.receive()
+                
+                # Seleccionar worker
+                worker_url = await self.select_worker()
+                if not worker_url:
+                    logger.warning("No hay workers disponibles para manejar la solicitud")
+                    response = b"HTTP/1.1 503 Service Unavailable\r\nContent-Length: 25\r\n\r\nNo hay workers disponibles.\n"
+                    await client.send(response)
+                    return
+                
+                # Reenviar solicitud al worker
+                response_data = await self.forward_request(request_data, worker_url)
+                
+                # Enviar respuesta al cliente
+                await client.send(response_data)
+        except TimeoutError:
+            logger.error("Timeout al manejar la conexión del cliente")
+            try:
+                error_msg = "Timeout al procesar la solicitud"
+                response = f"HTTP/1.1 504 Gateway Timeout\r\nContent-Length: {len(error_msg)}\r\n\r\n{error_msg}"
+                await client.send(response.encode())
+            except Exception:
+                pass
         except Exception as e:
             self.error_count += 1
             logger.error(f"Error al manejar conexión: {e}")
@@ -147,48 +166,23 @@ class ProxyServer:
                 await client.send(response.encode())
             except Exception as send_error:
                 logger.error(f"Error al enviar respuesta de error: {send_error}")
-    
+        finally:
+            # Asegurar que la conexión se cierre correctamente
+            try:
+                await client.aclose()
+            except Exception:
+                pass
+            
     async def select_worker(self) -> Optional[str]:
         """Selecciona un worker para manejar la solicitud."""
-        # Forzar sincronización en cada solicitud para asegurar que tenemos workers actualizados
-        self._sync_workers()
-        
-        # Si aún no hay workers, intentar buscar directamente en active_workers
-        if not self.workers_urls and self.active_workers:
-            logger.warning("No hay workers en workers_urls pero sí en active_workers, intentando recuperar")
-            for pid, worker in self.active_workers.items():
-                if hasattr(worker, 'port'):
-                    worker_url = f"http://127.0.0.1:{worker.port}"
-                    self.workers_urls.add(worker_url)
-                    logger.info(f"Recuperado worker: {worker_url}")
-        
-        # Si todavía no hay workers, intentar con puertos conocidos
+        # Si no hay workers sincronizados, intentar sincronizar ahora
         if not self.workers_urls:
-            logger.warning("Intentando conectar con puertos conocidos de workers")
-            # Intentar con puertos típicos (8001-8010)
-            for port in range(8001, 8011):
-                worker_url = f"http://127.0.0.1:{port}"
-                # Verificar si el puerto está activo - probar con la raíz en lugar de /health
-                try:
-                    async with httpx.AsyncClient(timeout=1.0) as client:
-                        # Intentar con la raíz primero
-                        response = await client.get(f"{worker_url}/", timeout=1.0)
-                        if response.status_code < 500:  # Aceptar cualquier respuesta que no sea error del servidor
-                            self.workers_urls.add(worker_url)
-                            logger.info(f"Encontrado worker activo en puerto conocido: {worker_url}")
-                            continue
-                except Exception:
-                    pass
-                
-                # Si la raíz no funciona, intentar con /health por compatibilidad
-                try:
-                    async with httpx.AsyncClient(timeout=1.0) as client:
-                        response = await client.get(f"{worker_url}/health", timeout=1.0)
-                        if response.status_code == 200:
-                            self.workers_urls.add(worker_url)
-                            logger.info(f"Encontrado worker activo en puerto conocido (health): {worker_url}")
-                except Exception:
-                    pass
+            self._sync_workers()
+        
+        # Si todavía no hay workers, intentar recuperación de emergencia
+        if not self.workers_urls:
+            logger.warning("Iniciando recuperación de emergencia de workers")
+            await self._emergency_worker_recovery()
         
         if not self.workers_urls:
             return None
@@ -200,8 +194,34 @@ class ProxyServer:
         
         self.last_worker_index = (self.last_worker_index + 1) % len(workers_list)
         selected = workers_list[self.last_worker_index]
-        logger.info(f"Worker seleccionado: {selected}")
         return selected
+    
+    async def _emergency_worker_recovery(self):
+        """Intenta recuperar workers en caso de emergencia."""
+        try:
+            # Verificar puertos conocidos
+            for port in range(8001, 8011):
+                worker_url = f"http://127.0.0.1:{port}"
+                try:
+                    # Intentar con la raíz primero
+                    async with httpx.AsyncClient(timeout=1.0) as client:
+                        response = await client.get(f"{worker_url}/", timeout=1.0)
+                        if response.status_code < 500:  # Aceptar cualquier respuesta que no sea error del servidor
+                            self.workers_urls.add(worker_url)
+                            logger.info(f"Recuperado worker de emergencia: {worker_url}")
+                except Exception:
+                    pass
+            
+            # Si no se encontraron workers, intentar iniciar uno nuevo
+            if not self.workers_urls and hasattr(self, 'server_adapter') and hasattr(self, 'app'):
+                logger.warning("Intentando iniciar worker de emergencia")
+                from proxa.process import start_worker
+                worker_info = await start_worker(self.server_adapter, self.app, self.active_workers)
+                if worker_info:
+                    logger.info(f"Worker de emergencia iniciado en puerto {worker_info.port}")
+                    self._sync_workers()  # Sincronizar para incluir el nuevo worker
+        except Exception as e:
+            logger.error(f"Error en recuperación de emergencia: {e}")
     
     async def forward_request(self, request_data: bytes, worker_url: str) -> bytes:
         """Reenvía una solicitud HTTP a un worker y devuelve la respuesta."""
@@ -212,7 +232,6 @@ class ProxyServer:
             
             # Construir URL completa
             url = f"{worker_url}{path}"
-            logger.info(f"Reenviando solicitud {method} a {url}")
             
             # Extraer headers
             headers = {}
@@ -233,11 +252,12 @@ class ProxyServer:
                 if not body:
                     body = None
             
-            # Realizar solicitud al worker con reintentos
-            max_retries = 3
+            # Realizar solicitud al worker con reintentos y timeouts más cortos
+            max_retries = 2
             for retry in range(max_retries):
                 try:
-                    timeout = httpx.Timeout(10.0, connect=5.0)
+                    # Usar timeouts más cortos para evitar bloqueos
+                    timeout = httpx.Timeout(5.0, connect=2.0)
                     async with httpx.AsyncClient(timeout=timeout) as client:
                         response = await client.request(
                             method=method,
@@ -251,13 +271,12 @@ class ProxyServer:
                         headers_lines = '\r\n'.join([f"{k}: {v}" for k, v in response.headers.items()])
                         
                         response_data = f"{status_line}{headers_lines}\r\n\r\n".encode('utf-8') + response.content
-                        logger.info(f"Respuesta recibida de {url}: {response.status_code}")
                         return response_data
                 except Exception as e:
                     logger.warning(f"Error en intento {retry+1}/{max_retries} al reenviar a {url}: {e}")
                     if retry == max_retries - 1:
                         raise
-                    await anyio.sleep(0.5)  # Esperar antes de reintentar
+                    await anyio.sleep(0.1)  # Esperar menos tiempo entre reintentos
                     
         except Exception as e:
             logger.error(f"Error al reenviar solicitud a {worker_url}: {e}")
