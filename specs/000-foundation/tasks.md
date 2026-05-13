@@ -38,7 +38,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 - [X] T001 Create `go.mod` at repo root with `module github.com/proxa-server/proxa` and `go 1.26` directive. Run `go mod tidy` (will be a no-op; no deps). Commit: `chore(build): initialize go module at go 1.26`.
 
-- [ ] T002 [P] Add Apache-2.0 `LICENSE` file at repo root (verbatim Apache License 2.0 text, copyright `Proxa contributors`). Commit: `chore(repo): add Apache 2.0 license`.
+- [X] T002 [P] Add Apache-2.0 `LICENSE` file at repo root (verbatim Apache License 2.0 text, copyright `Proxa contributors`). Commit: `chore(repo): add Apache 2.0 license`.
 
 - [ ] T003 [P] Add `.gitignore` at repo root covering `bin/`, `*.test`, `*.out`, `coverage.*`, `.DS_Store`, `proxa.db*`, and editor crud (`.idea/`, `.vscode/settings.json`). Commit: `chore(repo): add .gitignore`.
 
