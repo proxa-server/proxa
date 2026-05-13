@@ -62,7 +62,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 - [X] T008 [P] Create `pkg/types/project.go` with the `Project` struct (`Name`, `CreatedAt`) per `data-model.md`. JSON tags only (TOML not needed — projects are API-created, not TOML-declared). Imports: `time`. Commit: `feat(types): add Project entity`.
 
-- [ ] T009 [P] Create `pkg/types/subject.go` with the `Subject` struct (`ID`, `Name`, `Email`, `Provider`, `Metadata`). JSON tags only. Imports: none. Commit: `feat(types): add Subject entity`.
+- [X] T009 [P] Create `pkg/types/subject.go` with the `Subject` struct (`ID`, `Name`, `Email`, `Provider`, `Metadata`). JSON tags only. Imports: none. Commit: `feat(types): add Subject entity`.
 
 - [ ] T010 [P] Create `pkg/types/node.go` with `Node`, `NodeRole`, `NodeStatus`, `NodeResources` per `data-model.md`. JSON tags only. Imports: `time`. Commit: `feat(types): add Node entity with role and resource fields`.
 
