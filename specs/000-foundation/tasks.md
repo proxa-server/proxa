@@ -88,7 +88,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 - [X] T015 [P] [US1] Create `internal/version/version.go` exporting `var Version = "dev"`, `var Commit = "unknown"`, `var BuildDate = "unknown"` (mutable so `-ldflags "-X internal/version.Version=..."` can override at build time). Doc comment on each var. Imports: none. Commit: `feat(version): add build-time version vars`.
 
-- [ ] T016 [US1] Create `cmd/proxa-agent/main.go` with a minimal entrypoint: when invoked as `proxa-agent version` it prints `proxa-agent version <Version> (commit <Commit>, built <BuildDate>)`; any other arg prints usage to stderr and exits 2. Imports: `fmt`, `os`, `github.com/proxa-server/proxa/internal/version`. Depends on T015. Commit: `feat(cmd): add proxa-agent binary stub with version subcommand`.
+- [X] T016 [US1] Create `cmd/proxa-agent/main.go` with a minimal entrypoint: when invoked as `proxa-agent version` it prints `proxa-agent version <Version> (commit <Commit>, built <BuildDate>)`; any other arg prints usage to stderr and exits 2. Imports: `fmt`, `os`, `github.com/proxa-server/proxa/internal/version`. Depends on T015. Commit: `feat(cmd): add proxa-agent binary stub with version subcommand`.
 
 - [ ] T017 [P] [US1] Create `proto/README.md` (single section, two short paragraphs): purpose is the gRPC schema for control-plane↔agent communication; landing in feature 001 or 002. Commit: `docs(proto): add placeholder README`.
 
