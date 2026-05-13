@@ -38,11 +38,11 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 - [ ] T001 Create `go.mod` at repo root with `module github.com/proxa-server/proxa` and `go 1.26` directive. Run `go mod tidy` (will be a no-op; no deps). Commit: `chore(build): initialize go module at go 1.26`.
 
-- [ ] T002 [P] Add Apache-2.0 `LICENSE` file at repo root (verbatim Apache License 2.0 text, copyright `Proxa contributors`). Commit: `chore: add Apache 2.0 license`.
+- [ ] T002 [P] Add Apache-2.0 `LICENSE` file at repo root (verbatim Apache License 2.0 text, copyright `Proxa contributors`). Commit: `chore(repo): add Apache 2.0 license`.
 
-- [ ] T003 [P] Add `.gitignore` at repo root covering `bin/`, `*.test`, `*.out`, `coverage.*`, `.DS_Store`, `proxa.db*`, and editor crud (`.idea/`, `.vscode/settings.json`). Commit: `chore: add .gitignore`.
+- [ ] T003 [P] Add `.gitignore` at repo root covering `bin/`, `*.test`, `*.out`, `coverage.*`, `.DS_Store`, `proxa.db*`, and editor crud (`.idea/`, `.vscode/settings.json`). Commit: `chore(repo): add .gitignore`.
 
-- [ ] T004 Create the empty directory skeleton with `.gitkeep` placeholders where needed: `cmd/proxa/`, `cmd/proxa-agent/`, `internal/auth/`, `internal/ingress/`, `internal/runtime/`, `internal/secrets/`, `internal/security/`, `internal/store/`, `internal/version/`, `pkg/types/`, `proto/`, `web/`, `.github/workflows/`. Commit: `chore: create monorepo directory skeleton`.
+- [ ] T004 Create the empty directory skeleton with `.gitkeep` placeholders where needed: `cmd/proxa/`, `cmd/proxa-agent/`, `internal/auth/`, `internal/ingress/`, `internal/runtime/`, `internal/secrets/`, `internal/security/`, `internal/store/`, `internal/version/`, `pkg/types/`, `proto/`, `web/`, `.github/workflows/`. Commit: `chore(repo): create monorepo directory skeleton`.
 
 **Checkpoint**: `go build ./...` runs (compiles zero files; no errors).
 
@@ -90,11 +90,11 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 - [ ] T016 [US1] Create `cmd/proxa-agent/main.go` with a minimal entrypoint: when invoked as `proxa-agent version` it prints `proxa-agent version <Version> (commit <Commit>, built <BuildDate>)`; any other arg prints usage to stderr and exits 2. Imports: `fmt`, `os`, `github.com/proxa-server/proxa/internal/version`. Depends on T015. Commit: `feat(cmd): add proxa-agent binary stub with version subcommand`.
 
-- [ ] T017 [P] [US1] Create `proto/README.md` (single section, two short paragraphs): purpose is the gRPC schema for control-plane↔agent communication; landing in feature 001 or 002. Commit: `docs: add proto/ placeholder README`.
+- [ ] T017 [P] [US1] Create `proto/README.md` (single section, two short paragraphs): purpose is the gRPC schema for control-plane↔agent communication; landing in feature 001 or 002. Commit: `docs(proto): add placeholder README`.
 
-- [ ] T018 [P] [US1] Create `web/README.md`: purpose is HTMX + Alpine.js + Tailwind dashboard assets, embedded into the binary via `go:embed`; landing in the dashboard feature. Reference `specs/_reference/dashboard-mockup.html` as directional but non-authoritative. Commit: `docs: add web/ placeholder README with mockup reference`.
+- [ ] T018 [P] [US1] Create `web/README.md`: purpose is HTMX + Alpine.js + Tailwind dashboard assets, embedded into the binary via `go:embed`; landing in the dashboard feature. Reference `specs/_reference/dashboard-mockup.html` as directional but non-authoritative. Commit: `docs(web): add placeholder README with mockup reference`.
 
-- [ ] T019 [US1] Update `README.md` at repo root: short overview (one paragraph), repo layout table mirroring `quickstart.md`, link to `specs/000-foundation/quickstart.md` and to the constitution. Replace whatever currently exists from the legacy Python project. Commit: `docs: rewrite README for Go orchestrator structure`.
+- [ ] T019 [US1] Update `README.md` at repo root: short overview (one paragraph), repo layout table mirroring `quickstart.md`, link to `specs/000-foundation/quickstart.md` and to the constitution. Replace whatever currently exists from the legacy Python project. Commit: `docs(repo): rewrite README for Go orchestrator structure`.
 
 **Checkpoint**: `go build ./cmd/proxa-agent && ./proxa-agent version` works. Every reserved directory has a README. README at repo root reflects current project.
 
@@ -130,9 +130,9 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 **Purpose**: Tooling and release scaffolding so the success criteria (SC-001 through SC-005) can be claimed PASS.
 
-- [ ] T027 Create `Makefile` at repo root with phony targets `build` (builds both binaries into `bin/` with `CGO_ENABLED=0` and `-ldflags` injecting version/commit/date from `git describe`/`git rev-parse`), `test` (`go test ./...`), `lint` (`go vet ./... && staticcheck ./...` — `staticcheck` invoked via `go run honnef.co/go/tools/cmd/staticcheck@latest` so it doesn't need to be globally installed), `clean` (`rm -rf bin/`), and `tidy` (`go mod tidy`). Commit: `chore(build): add Makefile with build/test/lint/clean/tidy targets`.
+- [ ] T027 Create `Makefile` at repo root with phony targets `build` (builds both binaries into `bin/` with `CGO_ENABLED=0` and `-ldflags` injecting version/commit/date from `git describe`/`git rev-parse`), `test` (`go test ./...`), `lint` (`go vet ./... && staticcheck ./...` — `staticcheck` invoked via `go run honnef.co/go/tools/cmd/staticcheck@v0.5.1` so it doesn't need to be globally installed), `clean` (`rm -rf bin/`), and `tidy` (`go mod tidy`). Commit: `chore(build): add Makefile with build/test/lint/clean/tidy targets`.
 
-- [ ] T028 [P] Create `.github/workflows/ci.yml`: on push to any branch and on PR to `main`, run a matrix of `{os: ubuntu-latest, macos-latest}` × `{go: '1.26.x'}` executing `go vet ./...`, `go run honnef.co/go/tools/cmd/staticcheck@latest ./...`, `go test -race -count=1 ./...`, `go build ./...` (with `CGO_ENABLED=0`). Cache the module cache. Commit: `ci: add GitHub Actions workflow (vet, staticcheck, test, build)`.
+- [ ] T028 [P] Create `.github/workflows/ci.yml`: on push to any branch and on PR to `main`, run a matrix of `{os: ubuntu-latest, macos-latest}` × `{go: '1.26.x'}` executing `go vet ./...`, `go run honnef.co/go/tools/cmd/staticcheck@v0.5.1 ./...`, `go test -race -count=1 ./...`, `go build ./...` (with `CGO_ENABLED=0`). Cache the module cache. Commit: `chore(ci): add GitHub Actions workflow (vet, staticcheck, test, build)`.
 
 - [ ] T029 [P] Create `.goreleaser.yml` scaffolding multi-arch builds for `linux/{amd64,arm64}` and `darwin/{amd64,arm64}` of both `cmd/proxa` and `cmd/proxa-agent`. `CGO_ENABLED=0`. `archives` block produces tar.gz with `LICENSE` + `README.md` included. **Do not** wire a `release` workflow yet (no tag triggers); this is scaffolding only. Commit: `chore(build): scaffold goreleaser config for multi-arch release`.
 
@@ -227,5 +227,5 @@ Constitution §XI: one commit per task, scoped to the package being touched. Nev
 
 - No third-party dependencies enter `go.mod` in this feature. `go.sum` will exist (empty or near-empty) only after `go mod tidy` resolves the stdlib indirect graph.
 - The `noopRuntime`, `noopStore`, `noopSecretsStore`, `noopIngressController`, `noopPolicyEngine` types in T020–T025 are private (`noop*`). They exist for unit tests in future features (callers can pass them to satisfy the interface). They are NOT exported.
-- `staticcheck` is invoked via `go run honnef.co/go/tools/cmd/staticcheck@latest` from the Makefile and CI to avoid requiring a global install. This does add `honnef.co/go/tools` as an indirect `go.mod` entry once first invoked — that is allowed because staticcheck is a build/dev tool (not imported by application code) and is BSD-3-licensed (constitution §IX compliant).
+- `staticcheck` is invoked via `go run honnef.co/go/tools/cmd/staticcheck@v0.5.1` from the Makefile and CI to avoid requiring a global install. `go run <pkg>@<version>` does not modify `go.mod` (the tool is fetched into the module cache and executed in isolation), so FR-009 is preserved. The version is pinned for reproducibility; bump deliberately by editing the Makefile and `ci.yml` together. Staticcheck is BSD-3-licensed (constitution §IX compliant).
 - T030 is the only task that produces a documentation artifact rather than code. Its commit captures the validation evidence so the spec's success criteria are traceable in git.

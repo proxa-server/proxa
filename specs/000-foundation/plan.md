@@ -118,6 +118,7 @@ proxa/
 │       ├── node.go
 │       ├── project.go
 │       ├── policy.go
+│       ├── security.go             # type alias to internal/security.SecurityProfile
 │       └── subject.go
 ├── proto/                          # gRPC schema (reserved; empty in this feature)
 │   └── README.md                   # "Reserved for control-plane↔agent gRPC"
