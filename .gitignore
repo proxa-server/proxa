@@ -11,8 +11,7 @@
 *.dylib
 *.test
 *.out
-coverage.out
-coverage.html
+coverage.*
 
 # Go workspace
 go.work
@@ -32,6 +31,7 @@ Thumbs.db
 # Runtime / local data
 .proxa/
 proxa-data/
+proxa.db*
 *.pid
 *.sock
 *.log
