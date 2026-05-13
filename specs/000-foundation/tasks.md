@@ -42,7 +42,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 - [X] T003 [P] Add `.gitignore` at repo root covering `bin/`, `*.test`, `*.out`, `coverage.*`, `.DS_Store`, `proxa.db*`, and editor crud (`.idea/`, `.vscode/settings.json`). Commit: `chore(repo): add .gitignore`.
 
-- [ ] T004 Create the empty directory skeleton with `.gitkeep` placeholders where needed: `cmd/proxa/`, `cmd/proxa-agent/`, `internal/auth/`, `internal/ingress/`, `internal/runtime/`, `internal/secrets/`, `internal/security/`, `internal/store/`, `internal/version/`, `pkg/types/`, `proto/`, `web/`, `.github/workflows/`. Commit: `chore(repo): create monorepo directory skeleton`.
+- [X] T004 Create the empty directory skeleton with `.gitkeep` placeholders where needed: `cmd/proxa/`, `cmd/proxa-agent/`, `internal/auth/`, `internal/ingress/`, `internal/runtime/`, `internal/secrets/`, `internal/security/`, `internal/store/`, `internal/version/`, `pkg/types/`, `proto/`, `web/`, `.github/workflows/`. Commit: `chore(repo): create monorepo directory skeleton`.
 
 **Checkpoint**: `go build ./...` runs (compiles zero files; no errors).
 
