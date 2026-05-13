@@ -40,7 +40,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 - [X] T002 [P] Add Apache-2.0 `LICENSE` file at repo root (verbatim Apache License 2.0 text, copyright `Proxa contributors`). Commit: `chore(repo): add Apache 2.0 license`.
 
-- [ ] T003 [P] Add `.gitignore` at repo root covering `bin/`, `*.test`, `*.out`, `coverage.*`, `.DS_Store`, `proxa.db*`, and editor crud (`.idea/`, `.vscode/settings.json`). Commit: `chore(repo): add .gitignore`.
+- [X] T003 [P] Add `.gitignore` at repo root covering `bin/`, `*.test`, `*.out`, `coverage.*`, `.DS_Store`, `proxa.db*`, and editor crud (`.idea/`, `.vscode/settings.json`). Commit: `chore(repo): add .gitignore`.
 
 - [ ] T004 Create the empty directory skeleton with `.gitkeep` placeholders where needed: `cmd/proxa/`, `cmd/proxa-agent/`, `internal/auth/`, `internal/ingress/`, `internal/runtime/`, `internal/secrets/`, `internal/security/`, `internal/store/`, `internal/version/`, `pkg/types/`, `proto/`, `web/`, `.github/workflows/`. Commit: `chore(repo): create monorepo directory skeleton`.
 
