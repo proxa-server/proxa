@@ -36,7 +36,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 **Purpose**: Module identity, repo boilerplate, directory skeleton.
 
-- [ ] T001 Create `go.mod` at repo root with `module github.com/proxa-server/proxa` and `go 1.26` directive. Run `go mod tidy` (will be a no-op; no deps). Commit: `chore(build): initialize go module at go 1.26`.
+- [X] T001 Create `go.mod` at repo root with `module github.com/proxa-server/proxa` and `go 1.26` directive. Run `go mod tidy` (will be a no-op; no deps). Commit: `chore(build): initialize go module at go 1.26`.
 
 - [ ] T002 [P] Add Apache-2.0 `LICENSE` file at repo root (verbatim Apache License 2.0 text, copyright `Proxa contributors`). Commit: `chore(repo): add Apache 2.0 license`.
 
