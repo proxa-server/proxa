@@ -58,7 +58,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 - [X] T006 Create `internal/security/profile_test.go` with table-driven tests covering: (a) `Default()` returns `CapDrop=["ALL"]` and `*NoNewPrivileges==true`, (b) `Apply()` fills zero-valued fields without overriding caller choices, (c) `Validate()` rejects `User=root` without `AllowRoot=true` and rejects `NoNewPrivileges=false` without `AllowRoot=true`, (d) the zero-value `SecurityProfile{}` passes `Validate()`. Imports: `testing` only. Commit: `test(security): cover Default/Apply/Validate with table-driven tests`.
 
-- [ ] T007 Create `pkg/types/security.go` exposing the alias `type SecurityProfile = security.SecurityProfile` so public callers reach the type through `pkg/types`. File-level comment notes the cross-package design from `contracts/securityprofile.md`. Imports: `github.com/proxa-server/proxa/internal/security`. Depends on T005. Commit: `feat(types): re-export SecurityProfile from internal/security`.
+- [X] T007 Create `pkg/types/security.go` exposing the alias `type SecurityProfile = security.SecurityProfile` so public callers reach the type through `pkg/types`. File-level comment notes the cross-package design from `contracts/securityprofile.md`. Imports: `github.com/proxa-server/proxa/internal/security`. Depends on T005. Commit: `feat(types): re-export SecurityProfile from internal/security`.
 
 - [ ] T008 [P] Create `pkg/types/project.go` with the `Project` struct (`Name`, `CreatedAt`) per `data-model.md`. JSON tags only (TOML not needed — projects are API-created, not TOML-declared). Imports: `time`. Commit: `feat(types): add Project entity`.
 
