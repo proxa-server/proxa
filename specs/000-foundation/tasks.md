@@ -72,7 +72,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 - [X] T013 [P] Create `pkg/types/service.go` with `Service`, `ServiceStatus` enum, `ReplicaState`, `DeploymentRecord` per `data-model.md`. JSON tags only. Imports: `time`. Depends on T012 (uses `TaskDef`). Commit: `feat(types): add Service entity with replica and deployment-history fields`.
 
-- [ ] T014 [P] Create `pkg/types/job.go` with `Job` and `JobRun` per `data-model.md`. JSON tags only. Imports: `time`. Depends on T012 (uses `TaskDef`). Commit: `feat(types): add Job entity with run history`.
+- [X] T014 [P] Create `pkg/types/job.go` with `Job` and `JobRun` per `data-model.md`. JSON tags only. Imports: `time`. Depends on T012 (uses `TaskDef`). Commit: `feat(types): add Job entity with run history`.
 
 **Checkpoint**: `go test ./internal/security/...` is green; `go build ./pkg/types/...` succeeds. The constitution-§II defaults are now enforceable; downstream interfaces can rely on `types.SecurityProfile` and the entity types.
 
