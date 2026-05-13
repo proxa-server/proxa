@@ -77,7 +77,7 @@ Full signatures are defined in the technical spec, Section 14 (Core Interfaces).
 
 ## Assumptions
 
-- Go 1.22+ is available in the development environment
+- Go 1.26.x is available in the development environment
 - The repo is at `github.com/proxa-server/proxa`
 - No external services are needed for this feature (no Docker, no database)
 
