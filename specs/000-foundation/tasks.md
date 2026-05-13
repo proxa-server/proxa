@@ -66,7 +66,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 - [X] T010 [P] Create `pkg/types/node.go` with `Node`, `NodeRole`, `NodeStatus`, `NodeResources` per `data-model.md`. JSON tags only. Imports: `time`. Commit: `feat(types): add Node entity with role and resource fields`.
 
-- [ ] T011 [P] Create `pkg/types/policy.go` with `Policy` and the `Role` enum (`admin`, `editor`, `viewer`, `agent`). JSON tags only. Imports: `time`. Commit: `feat(types): add Policy with RBAC role enum`.
+- [X] T011 [P] Create `pkg/types/policy.go` with `Policy` and the `Role` enum (`admin`, `editor`, `viewer`, `agent`). JSON tags only. Imports: `time`. Commit: `feat(types): add Policy with RBAC role enum`.
 
 - [ ] T012 [P] Create `pkg/types/taskdef.go` with `TaskDef` plus its sub-types `VolumeMount`, `PortSpec`, `DeployStrategy` enum, `HealthCheck`, and `ResourceLimits` per `data-model.md`. Both TOML and JSON tags. The `Security` field references `SecurityProfile` (the alias from T007). Imports: `time`. Depends on T007. Commit: `feat(types): add TaskDef and its sub-types`.
 
