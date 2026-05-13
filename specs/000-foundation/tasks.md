@@ -94,7 +94,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 - [X] T018 [P] [US1] Create `web/README.md`: purpose is HTMX + Alpine.js + Tailwind dashboard assets, embedded into the binary via `go:embed`; landing in the dashboard feature. Reference `specs/_reference/dashboard-mockup.html` as directional but non-authoritative. Commit: `docs(web): add placeholder README with mockup reference`.
 
-- [ ] T019 [US1] Update `README.md` at repo root: short overview (one paragraph), repo layout table mirroring `quickstart.md`, link to `specs/000-foundation/quickstart.md` and to the constitution. Replace whatever currently exists from the legacy Python project. Commit: `docs(repo): rewrite README for Go orchestrator structure`.
+- [X] T019 [US1] Update `README.md` at repo root: short overview (one paragraph), repo layout table mirroring `quickstart.md`, link to `specs/000-foundation/quickstart.md` and to the constitution. Replace whatever currently exists from the legacy Python project. Commit: `docs(repo): rewrite README for Go orchestrator structure`.
 
 **Checkpoint**: `go build ./cmd/proxa-agent && ./proxa-agent version` works. Every reserved directory has a README. README at repo root reflects current project.
 
