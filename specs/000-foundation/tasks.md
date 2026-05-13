@@ -54,7 +54,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 **⚠️ CRITICAL**: US1 and US2 work cannot start until this phase is complete.
 
-- [ ] T005 Create `internal/security/profile.go` with the `SecurityProfile` struct (fields per `contracts/securityprofile.md`) plus the `Default()`, `Apply()`, and `Validate()` functions. Doc comments on each exported symbol. Imports: `errors` only. Commit: `feat(security): add SecurityProfile struct with safe defaults and validation`.
+- [X] T005 Create `internal/security/profile.go` with the `SecurityProfile` struct (fields per `contracts/securityprofile.md`) plus the `Default()`, `Apply()`, and `Validate()` functions. Doc comments on each exported symbol. Imports: `errors` only. Commit: `feat(security): add SecurityProfile struct with safe defaults and validation`.
 
 - [ ] T006 Create `internal/security/profile_test.go` with table-driven tests covering: (a) `Default()` returns `CapDrop=["ALL"]` and `*NoNewPrivileges==true`, (b) `Apply()` fills zero-valued fields without overriding caller choices, (c) `Validate()` rejects `User=root` without `AllowRoot=true` and rejects `NoNewPrivileges=false` without `AllowRoot=true`, (d) the zero-value `SecurityProfile{}` passes `Validate()`. Imports: `testing` only. Commit: `test(security): cover Default/Apply/Validate with table-driven tests`.
 
