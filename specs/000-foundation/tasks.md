@@ -64,7 +64,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 - [X] T009 [P] Create `pkg/types/subject.go` with the `Subject` struct (`ID`, `Name`, `Email`, `Provider`, `Metadata`). JSON tags only. Imports: none. Commit: `feat(types): add Subject entity`.
 
-- [ ] T010 [P] Create `pkg/types/node.go` with `Node`, `NodeRole`, `NodeStatus`, `NodeResources` per `data-model.md`. JSON tags only. Imports: `time`. Commit: `feat(types): add Node entity with role and resource fields`.
+- [X] T010 [P] Create `pkg/types/node.go` with `Node`, `NodeRole`, `NodeStatus`, `NodeResources` per `data-model.md`. JSON tags only. Imports: `time`. Commit: `feat(types): add Node entity with role and resource fields`.
 
 - [ ] T011 [P] Create `pkg/types/policy.go` with `Policy` and the `Role` enum (`admin`, `editor`, `viewer`, `agent`). JSON tags only. Imports: `time`. Commit: `feat(types): add Policy with RBAC role enum`.
 
