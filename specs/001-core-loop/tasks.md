@@ -101,7 +101,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T009 [P] Create `internal/store/sqlite/jobs.go` implementing `PutJob`, `GetJob`, `ListJobs`, `DeleteJob`. Mirror Services' shape. Commit: `feat(store/sqlite): implement Job CRUD`.
 
-- [ ] T010 [P] Create `internal/store/sqlite/nodes.go` implementing `PutNode`, `GetNode`, `ListNodes`, `DeleteNode`, and `Heartbeat` (single indexed UPDATE, no other side effects). Commit: `feat(store/sqlite): implement Node CRUD and Heartbeat`.
+- [X] T010 [P] Create `internal/store/sqlite/nodes.go` implementing `PutNode`, `GetNode`, `ListNodes`, `DeleteNode`, and `Heartbeat` (single indexed UPDATE, no other side effects). Commit: `feat(store/sqlite): implement Node CRUD and Heartbeat`.
 
 - [ ] T011 [P] Create `internal/store/sqlite/auth.go` implementing `PutSubject`, `GetSubject`, `PutPolicy` (rejects `Project="*"` for non-`admin` roles per `data-model.md`), `ListPoliciesFor`, `DeletePolicy`. Commit: `feat(store/sqlite): implement Subject and Policy CRUD`.
 
