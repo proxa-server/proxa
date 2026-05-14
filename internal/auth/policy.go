@@ -20,6 +20,11 @@ import (
 //     [StateStore].
 //   - Authorize is read-only against the store; impls MAY cache
 //     PoliciesFor lookups with a short TTL.
+//
+// The production implementation lives in
+// [github.com/proxa-server/proxa/internal/auth/dbpolicy]; the noop
+// stub from feature 000 was removed once dbpolicy.New() became the
+// real impl. Tests that need a fake should hand-roll one.
 type PolicyEngine interface {
 	Authorize(ctx context.Context, req AuthzRequest) error
 	PoliciesFor(ctx context.Context, subjectID string) ([]types.Policy, error)
@@ -69,15 +74,3 @@ const (
 // ErrForbidden is returned by [PolicyEngine.Authorize] when the request
 // is denied by policy.
 var ErrForbidden = errors.New("auth: forbidden")
-
-// noopPolicyEngine satisfies [PolicyEngine] with ErrNotImplemented for
-// every method. Useful as a placeholder in unit tests.
-type noopPolicyEngine struct{}
-
-// Compile-time assertion that noopPolicyEngine satisfies PolicyEngine.
-var _ PolicyEngine = noopPolicyEngine{}
-
-func (noopPolicyEngine) Authorize(context.Context, AuthzRequest) error { return ErrNotImplemented }
-func (noopPolicyEngine) PoliciesFor(context.Context, string) ([]types.Policy, error) {
-	return nil, ErrNotImplemented
-}
