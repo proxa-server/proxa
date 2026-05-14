@@ -137,7 +137,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T023 Create `internal/runtime/docker/labels.go` exporting the seven label keys (`Managed`, `Project`, `Service`, `Replica`, `SpecHash`, `NodeID`, `CreatedAt`) per `data-model.md`. Helpers `BuildContainerLabels(spec) map[string]string` and `ContainerNameFor(project, service, replica) string` (returns `proxa-{project}-{service}-{replica}`). Commit: `feat(runtime/docker): add label and naming helpers`.
 
-- [ ] T024 [P] Add `internal/runtime/docker/labels_test.go` covering label population, name format edge cases (long project + service names should not exceed Docker's 253-char limit). Commit: `test(runtime/docker): cover label and name builders`.
+- [X] T024 [P] Add `internal/runtime/docker/labels_test.go` covering label population, name format edge cases (long project + service names should not exceed Docker's 253-char limit). Commit: `test(runtime/docker): cover label and name builders`.
 
 - [ ] T025 Create `internal/runtime/docker/security.go` with `applySecurityProfile(spec runtime.ContainerSpec) (host *container.HostConfig, cfg *container.Config)` that calls `security.Apply(spec.Security)` then maps to Docker's `HostConfig.CapAdd`/`CapDrop`/`SecurityOpt`/`ReadonlyRootfs` and `Config.User`. **FR-002 default**: when the resolved `User` is empty AND `AllowRoot=false`, set `Config.User = "1000:1000"` so we genuinely run non-root regardless of the image's `USER` directive (otherwise `nginx:alpine` and friends silently run as root). Constitution §II is enforced HERE — no caller can bypass. Commit: `feat(runtime/docker): apply SecurityProfile defaults to container HostConfig`.
 
