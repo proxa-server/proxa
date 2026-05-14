@@ -120,7 +120,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 - [X] T025 [US2] Create `internal/auth/policy.go` with the `PolicyEngine` interface, `AuthzRequest`, `ResourceRef`, `Verb` and `ResourceKind` enums, and `ErrForbidden`/`ErrNotImplemented` per `contracts/policyengine.md`. Private `noopPolicyEngine`. Same package as T024 — must follow T024 (single-file conflict on package-level naming). Imports: `context`, `errors`, `github.com/proxa-server/proxa/pkg/types`. Depends on T024. Commit: `feat(auth): declare PolicyEngine with RBAC verb and kind enums`.
 
-- [ ] T026 [US2] Create `cmd/proxa/main.go` mirroring the agent stub from T016 but for the control-plane binary: `proxa version` prints version string; any other arg prints usage and exits 2. This is the file referenced by SC-004. Imports: `fmt`, `os`, `github.com/proxa-server/proxa/internal/version`. Depends on T015. Commit: `feat(cmd): add proxa control-plane binary stub with version subcommand`.
+- [X] T026 [US2] Create `cmd/proxa/main.go` mirroring the agent stub from T016 but for the control-plane binary: `proxa version` prints version string; any other arg prints usage and exits 2. This is the file referenced by SC-004. Imports: `fmt`, `os`, `github.com/proxa-server/proxa/internal/version`. Depends on T015. Commit: `feat(cmd): add proxa control-plane binary stub with version subcommand`.
 
 **Checkpoint**: `go build ./...` succeeds. `go vet ./...` and `staticcheck ./...` report zero issues. `./proxa version` and `./proxa-agent version` both print a string. Every interface has a doc comment that points at its contract file.
 
