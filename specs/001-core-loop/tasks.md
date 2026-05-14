@@ -175,7 +175,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Config + server scaffolding
 
-- [ ] T040 Create `internal/config/config.go` with `Config` struct (DataDir, ListenAddr, TickInterval, LogLevel) + `Load()` using viper. Read order: defaults → `~/.proxa/config.toml` → env vars (`PROXA_*` prefix) → flags. Defaults: DataDir=`~/.proxa`, ListenAddr=`unix://${DataDir}/proxa.sock`, TickInterval=`5s`, LogLevel=`info`. Commit: `feat(config): add viper-based configuration loader`.
+- [X] T040 Create `internal/config/config.go` with `Config` struct (DataDir, ListenAddr, TickInterval, LogLevel) + `Load()` using viper. Read order: defaults → `~/.proxa/config.toml` → env vars (`PROXA_*` prefix) → flags. Defaults: DataDir=`~/.proxa`, ListenAddr=`unix://${DataDir}/proxa.sock`, TickInterval=`5s`, LogLevel=`info`. Commit: `feat(config): add viper-based configuration loader`.
 
 - [ ] T041 Create `internal/server/server.go` with `Server` struct (holding an exported `Router *chi.Mux` field that callers populate) + `New(cfg, store, runtime, recon, auth) *Server` (initializes `Router = chi.NewMux()`) + `Start(ctx)` (binds the configured listener, sets socket mode 0660 if Unix) + `Shutdown(ctx)` (graceful). Listener URL parsing: `unix:///path` → Unix socket; `tcp://host:port` → TCP. Also exports `IsUnixListener() bool` so middleware in T042 can decide whether to bypass auth on `/ui/`. Commit: `feat(server): add HTTP server lifecycle with Unix/TCP listener support`.
 
