@@ -105,7 +105,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T011 [P] Create `internal/store/sqlite/auth.go` implementing `PutSubject`, `GetSubject`, `PutPolicy` (rejects `Project="*"` for non-`admin` roles per `data-model.md`), `ListPoliciesFor`, `DeletePolicy`. Commit: `feat(store/sqlite): implement Subject and Policy CRUD`.
 
-- [ ] T012 Create `internal/store/sqlite/tx.go` implementing the `Tx` type and `Tx(ctx, fn)`. Begin transaction, pass a `Tx`-conforming object to `fn`, commit on nil error or rollback on error. Commit: `feat(store/sqlite): implement transactional Tx`.
+- [X] T012 Create `internal/store/sqlite/tx.go` implementing the `Tx` type and `Tx(ctx, fn)`. Begin transaction, pass a `Tx`-conforming object to `fn`, commit on nil error or rollback on error. Commit: `feat(store/sqlite): implement transactional Tx`.
 
 - [ ] T013 [P] Create `internal/store/sqlite/sqlite_test.go` with table-driven tests covering: project create+list+duplicate-rejection; service Put/Get/List/Delete with spec_hash recomputation; project-scope isolation (same name in two projects coexists); migration idempotency. Tests use `:memory:` DSN. Commit: `test(store/sqlite): add table-driven CRUD and isolation tests`.
 
