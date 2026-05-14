@@ -191,7 +191,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T046 Create `internal/cli/root.go` with `NewRoot() *cobra.Command` setting `Use="proxa"`, the version vars from `internal/version` as `Version`, persistent flags `--data-dir`, `--listen`, `--config`, `--log-level`. Wires viper bindings via `internal/config`. Commit: `feat(cli): add cobra root command with persistent flags`.
 
-- [ ] T047 Create `internal/cli/client.go` with `httpClient` wrapper: dials Unix socket if `ListenAddr` starts with `unix://`, otherwise TCP; injects `Authorization: Bearer ${PROXA_TOKEN || ${DataDir}/token}` on every request. Methods: `UpsertService`, `Scale`, `Status`, `DeleteService`, `ListServices`. Commit: `feat(cli): add HTTP client wrapper for the API`.
+- [X] T047 Create `internal/cli/client.go` with `httpClient` wrapper: dials Unix socket if `ListenAddr` starts with `unix://`, otherwise TCP; injects `Authorization: Bearer ${PROXA_TOKEN || ${DataDir}/token}` on every request. Methods: `UpsertService`, `Scale`, `Status`, `DeleteService`, `ListServices`. Commit: `feat(cli): add HTTP client wrapper for the API`.
 
 - [ ] T048 Create `internal/cli/init.go` implementing `proxa init` per `quickstart.md` step 1: ensure DataDir exists, open SQLite, run `Migrate`, generate the master key (`crypto/rand.Read(32)` → `${DataDir}/secrets.key` mode 0600), generate the bootstrap token, hash with bcrypt, insert as a `bootstrap` subject, write plaintext to `${DataDir}/token` mode 0600 AND print to stdout exactly once. Generate the local admin user with a random password, insert hashed, print plaintext. Commit: `feat(cli): implement proxa init`.
 
