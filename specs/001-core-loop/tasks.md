@@ -107,7 +107,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T012 Create `internal/store/sqlite/tx.go` implementing the `Tx` type and `Tx(ctx, fn)`. Begin transaction, pass a `Tx`-conforming object to `fn`, commit on nil error or rollback on error. Commit: `feat(store/sqlite): implement transactional Tx`.
 
-- [ ] T013 [P] Create `internal/store/sqlite/sqlite_test.go` with table-driven tests covering: project create+list+duplicate-rejection; service Put/Get/List/Delete with spec_hash recomputation; project-scope isolation (same name in two projects coexists); migration idempotency. Tests use `:memory:` DSN. Commit: `test(store/sqlite): add table-driven CRUD and isolation tests`.
+- [X] T013 [P] Create `internal/store/sqlite/sqlite_test.go` with table-driven tests covering: project create+list+duplicate-rejection; service Put/Get/List/Delete with spec_hash recomputation; project-scope isolation (same name in two projects coexists); migration idempotency. Tests use `:memory:` DSN. Commit: `test(store/sqlite): add table-driven CRUD and isolation tests`.
 
 ### TOML parser (`internal/parser/toml/`)
 
