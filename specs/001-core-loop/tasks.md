@@ -171,7 +171,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T038 Create `internal/reconciler/reconciler.go` with `Reconciler` struct + `New(store, runtime, opts) *Reconciler` + `Run(ctx)`. Run loop: `time.NewTicker(opts.TickInterval)` plus a `Poke()` channel for explicit triggers from the API server. Each tick: list services per project, call `Runtime.ListContainers(project)`, compute diff, apply actions. Per-action errors are logged via `slog` and the loop continues. Commit: `feat(reconciler): add tick-driven reconciliation loop with Poke channel`.
 
-- [ ] T039 [P] Add `internal/reconciler/reconciler_test.go` using `testing/synctest` (Go 1.26 stable) for deterministic time. Scenarios: tick triggers diff + apply; Poke shortcuts the wait; errors don't stop the loop; ctx cancel exits cleanly. Uses fake Store + fake Runtime. Commit: `test(reconciler): cover Run loop with synctest`.
+- [X] T039 [P] Add `internal/reconciler/reconciler_test.go` using `testing/synctest` (Go 1.26 stable) for deterministic time. Scenarios: tick triggers diff + apply; Poke shortcuts the wait; errors don't stop the loop; ctx cancel exits cleanly. Uses fake Store + fake Runtime. Commit: `test(reconciler): cover Run loop with synctest`.
 
 ### Config + server scaffolding
 
