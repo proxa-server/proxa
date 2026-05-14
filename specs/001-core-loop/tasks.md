@@ -213,7 +213,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T051 [US1] Create `internal/cli/up.go` implementing `proxa up <file>`: **first check that `${DataDir}/token` exists; if absent, print `error: proxa not initialized; run \`proxa init\` first` and exit 1** (FR-007 / SC-007 honors the spec's "without proxa init" wording). Then read the file, call `parser/toml.Parse` + `Validate`, then `client.UpsertService(taskdef)`. Print the result. Exit 1 on validation error with the error code prefix from the grammar contract. Commit: `feat(cli): implement proxa up with init-state precheck`.
 
-- [ ] T052 [US1] Add `internal/cli/up_test.go` covering: valid TOML round-trip via httptest server, validation-error message formatting, file-not-found exit code. Commit: `test(cli): cover proxa up command paths`.
+- [X] T052 [US1] Add `internal/cli/up_test.go` covering: valid TOML round-trip via httptest server, validation-error message formatting, file-not-found exit code. Commit: `test(cli): cover proxa up command paths`.
 
 - [ ] T053 [US1] Add an integration test at `tests/e2e/deploy_test.go` (build-tagged `//go:build e2e`) that compiles the binary, starts a server in a temp DataDir, runs `proxa up` with a fixture TOML, then `docker inspect`-equivalent assertions via the docker client to confirm SC-001 (CapDrop=ALL, non-root, no-new-privileges). Add `make test-e2e`. Commit: `test(e2e): cover deploy flow and SC-001 security defaults`.
 
