@@ -121,7 +121,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T017 Create `internal/auth/token/token.go` implementing `Authenticator`. Constructor `New(store store.StateStore) *TokenAuthenticator`. `Authenticate` extracts `Authorization: Bearer <token>`, looks up the bootstrap subject by provider tag, verifies via `bcrypt.CompareHashAndPassword`. `RotateCredentials` regenerates the token. Token format: 32 random bytes → base64url. Commit: `feat(auth/token): implement TokenAuthenticator with bcrypt verification`.
 
-- [ ] T018 [P] Add `internal/auth/token/token_test.go` with table-driven tests: missing header, malformed header, valid token, invalid token, rotated token (old fails, new succeeds). Use a fake `StateStore` from a small in-package interface. Commit: `test(auth/token): cover Bearer token verification paths`.
+- [X] T018 [P] Add `internal/auth/token/token_test.go` with table-driven tests: missing header, malformed header, valid token, invalid token, rotated token (old fails, new succeeds). Use a fake `StateStore` from a small in-package interface. Commit: `test(auth/token): cover Bearer token verification paths`.
 
 - [ ] T019 [P] Create `internal/auth/password/password.go` implementing `Authenticator`. Constructor `New(store store.StateStore) *LocalPasswordAuthenticator`. `Authenticate` extracts a `Basic` auth header (or `application/json` body for the future `/login` endpoint — for v0.0 only Basic is wired). `RotateCredentials` re-hashes a new password with `bcrypt.GenerateFromPassword(cost=12)`. Commit: `feat(auth/password): implement LocalPasswordAuthenticator with bcrypt hashing`.
 
