@@ -229,7 +229,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Implementation for User Story 2
 
-- [ ] T054 [US2] Add an integration test at `tests/e2e/restart_test.go` (build-tagged `e2e`): deploy 3 replicas, `docker kill` one, poll for ≤15s waiting for replica re-creation, fail if not back. Asserts SC-002. Commit: `test(e2e): cover reconciler restart-on-crash (SC-002)`.
+- [X] T054 [US2] Add an integration test at `tests/e2e/restart_test.go` (build-tagged `e2e`): deploy 3 replicas, `docker kill` one, poll for ≤15s waiting for replica re-creation, fail if not back. Asserts SC-002. Commit: `test(e2e): cover reconciler restart-on-crash (SC-002)`.
 
 **Checkpoint**: SC-002 passes. With Phases 3+4 complete, the MVP is "Proxa keeps your containers up." Subsequent phases add lifecycle convenience commands.
 
