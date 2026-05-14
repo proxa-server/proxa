@@ -215,7 +215,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T052 [US1] Add `internal/cli/up_test.go` covering: valid TOML round-trip via httptest server, validation-error message formatting, file-not-found exit code. Commit: `test(cli): cover proxa up command paths`.
 
-- [ ] T053 [US1] Add an integration test at `tests/e2e/deploy_test.go` (build-tagged `//go:build e2e`) that compiles the binary, starts a server in a temp DataDir, runs `proxa up` with a fixture TOML, then `docker inspect`-equivalent assertions via the docker client to confirm SC-001 (CapDrop=ALL, non-root, no-new-privileges). Add `make test-e2e`. Commit: `test(e2e): cover deploy flow and SC-001 security defaults`.
+- [X] T053 [US1] Add an integration test at `tests/e2e/deploy_test.go` (build-tagged `//go:build e2e`) that compiles the binary, starts a server in a temp DataDir, runs `proxa up` with a fixture TOML, then `docker inspect`-equivalent assertions via the docker client to confirm SC-001 (CapDrop=ALL, non-root, no-new-privileges). Add `make test-e2e`. Commit: `test(e2e): cover deploy flow and SC-001 security defaults`.
 
 **Checkpoint**: SC-001 passes. The MVP is shippable as a static deploy tool without any of the reconciler-driven user stories — but Phase 4 lands trivially on this same code.
 
