@@ -17,7 +17,9 @@ proxa ps                           # lists services with desired/actual replicas
 proxa down api                     # sets replicas=0, reconciler removes containers
 ```
 
-Foundation (000) shipped only stubs and the `internal/security` real-logic package. Everything else returns `ErrNotImplemented`. This feature replaces those stubs with concrete code, adds `internal/reconciler/`, `internal/parser/toml/`, `internal/server/`, `internal/cli/`, and `internal/config/`, and wires `cmd/proxa/main.go` to the cobra root command.
+Foundation (000) shipped only stubs and the `internal/security` real-logic package. Everything else returns `ErrNotImplemented`. This feature replaces those stubs with concrete code, adds `internal/reconciler/`, `internal/parser/toml/`, `internal/server/`, `internal/cli/`, `internal/config/`, `internal/hash/`, `internal/auth/dbpolicy/`, and `internal/web/`, and wires `cmd/proxa/main.go` to the cobra root command.
+
+This feature also ships a **slim read-only dashboard** at `/ui/` (per FR-017 added during /speckit.analyze). Frontend trio (HTMX + Alpine + Tailwind) embedded via `go:embed`. Auth: Unix-socket access bypasses the token check; TCP listeners require auth (or return 401 in v0.0). The full dashboard with login + write ops + log viewer remains scoped to Feature 004.
 
 ## Technical Context
 
@@ -38,6 +40,11 @@ Foundation (000) shipped only stubs and the `internal/security` real-logic packa
 All §IX-compliant. Indirect deps (Docker pulls in many) audited in `research.md` after `go mod tidy` lands.
 
 **Storage**: SQLite via `modernc.org/sqlite` in WAL mode. Single file at `${PROXA_DATA_DIR}/proxa.db` (default `~/.proxa/proxa.db`). Schema migrations run idempotently at server startup.
+
+**Frontend assets** (slim dashboard): vendored under `web/static/` and embedded via `go:embed`. No Node.js at build or runtime (constitution §V).
+- `htmx.min.js` (~14KB) — pinned to a specific HTMX release version, downloaded once.
+- `alpine.min.js` (~16KB) — pinned to a specific Alpine release version, downloaded once.
+- `app.css` — generated locally via the standalone `tailwindcss` CLI binary (one-shot, not in CI), checked in. Theme extends with the project's sage/teal palette + Geist/Instrument-Serif fonts from the dashboard mockup at `specs/_reference/dashboard-mockup.html`. Regeneration steps documented in `CLAUDE.md` (added by T072).
 
 **Testing**:
 - `testing` (stdlib) for table-driven unit tests.
@@ -110,13 +117,16 @@ proxa/
 ├── internal/
 │   ├── auth/
 │   │   ├── auth.go                            # (existing)
-│   │   ├── policy.go                          # (existing)
+│   │   ├── policy.go                          # (existing — interface only; noop deleted by T021)
 │   │   ├── token/
 │   │   │   ├── token.go                       # NEW — TokenAuthenticator (bearer token)
 │   │   │   └── token_test.go
-│   │   └── password/
-│   │       ├── password.go                    # NEW — LocalPasswordAuthenticator (bcrypt)
-│   │       └── password_test.go
+│   │   ├── password/
+│   │   │   ├── password.go                    # NEW — LocalPasswordAuthenticator (bcrypt)
+│   │   │   └── password_test.go
+│   │   └── dbpolicy/
+│   │       ├── dbpolicy.go                    # NEW — StateStore-backed PolicyEngine impl
+│   │       └── dbpolicy_test.go
 │   ├── cli/
 │   │   ├── root.go                            # NEW — cobra root, global flags
 │   │   ├── init.go                            # NEW — proxa init
@@ -140,8 +150,7 @@ proxa/
 │   │   ├── reconciler.go                      # NEW — main loop, ticker, error handling
 │   │   ├── diff.go                            # NEW — pure function: (desired, actual) → action set
 │   │   ├── action.go                          # NEW — apply one action via Runtime
-│   │   ├── hash.go                            # NEW — canonical TaskDef → SHA256 for change detection
-│   │   └── *_test.go
+│   │   └── *_test.go                          # (hash moved to internal/hash/ to avoid layering inversion)
 │   ├── runtime/
 │   │   ├── runtime.go                         # (existing)
 │   │   └── docker/
@@ -158,24 +167,41 @@ proxa/
 │   │   ├── handlers.go                        # NEW — REST handlers
 │   │   ├── middleware.go                      # NEW — auth middleware
 │   │   └── *_test.go
-│   └── store/
-│       ├── store.go                           # (existing)
-│       └── sqlite/
-│           ├── sqlite.go                      # NEW — sqliteStore: Open/Close/Migrate
-│           ├── migrations.go                  # NEW — versioned schema
-│           ├── projects.go                    # NEW — CreateProject/Get/List/Delete
-│           ├── services.go                    # NEW — Put/Get/List/Delete/WatchServices
-│           ├── jobs.go                        # NEW — Put/Get/List/Delete
-│           ├── nodes.go                       # NEW — Put/Get/List/Delete + Heartbeat
-│           ├── auth.go                        # NEW — PutSubject/Get + PutPolicy/ListFor/Delete
-│           ├── tx.go                          # NEW — Tx implementation
-│           └── *_test.go
+│   ├── store/
+│   │   ├── store.go                           # (existing)
+│   │   └── sqlite/
+│   │       ├── sqlite.go                      # NEW — sqliteStore: Open/Close/Migrate
+│   │       ├── migrations.go                  # NEW — versioned schema
+│   │       ├── projects.go                    # NEW — CreateProject/Get/List/Delete
+│   │       ├── services.go                    # NEW — Put/Get/List/Delete/WatchServices
+│   │       ├── jobs.go                        # NEW — Put/Get/List/Delete
+│   │       ├── nodes.go                       # NEW — Put/Get/List/Delete + Heartbeat
+│   │       ├── auth.go                        # NEW — PutSubject/Get + PutPolicy/ListFor/Delete
+│   │       ├── tx.go                          # NEW — Tx implementation
+│   │       └── *_test.go
+│   ├── hash/
+│   │   ├── hash.go                            # NEW — canonical-JSON SHA-256 (leaf utility)
+│   │   └── hash_test.go
+│   └── web/
+│       └── web.go                             # NEW — go:embed FS for web/static + web/templates
+├── web/
+│   ├── static/
+│   │   ├── htmx.min.js                        # NEW — vendored, pinned version
+│   │   ├── alpine.min.js                      # NEW — vendored, pinned version
+│   │   └── app.css                            # NEW — Tailwind production build (locally generated)
+│   ├── templates/
+│   │   ├── index.html                         # NEW — slim dashboard landing
+│   │   └── services_table.html                # NEW — HTMX-swappable services-table fragment
+│   └── README.md                              # (existing) — updated by T072
 ├── pkg/
 │   └── types/                                 # (existing) — no changes; entities already cover this feature
+├── tests/
+│   └── e2e/                                   # NEW — //go:build e2e end-to-end tests
+│       └── *_test.go
 └── go.mod                                     # MODIFIED — gains the seven listed deps
 ```
 
-**Structure Decision**: Keep the foundation's monorepo layout from §4.2. New code lives under existing `internal/` packages plus six new packages: `parser/toml`, `reconciler`, `server`, `cli`, `config`, and three concrete-impl subpackages (`auth/token`, `auth/password`, `runtime/docker`, `store/sqlite`). The decision to put concrete impls under sibling subpackages (e.g., `internal/store/sqlite/`) rather than rename the parent (e.g., `internal/sqlitestore/`) keeps the import path readable: `import "github.com/proxa-server/proxa/internal/store"` for the interface, `import "github.com/proxa-server/proxa/internal/store/sqlite"` for the impl. This is the standard Go pattern for "interface here, impls under me."
+**Structure Decision**: Keep the foundation's monorepo layout from §4.2. New code lives under existing `internal/` packages plus nine new packages: `parser/toml`, `reconciler`, `server`, `cli`, `config`, `hash`, `web`, and the concrete-impl subpackages (`auth/token`, `auth/password`, `auth/dbpolicy`, `runtime/docker`, `store/sqlite`). The decision to put concrete impls under sibling subpackages (e.g., `internal/store/sqlite/`, `internal/auth/dbpolicy/`) rather than mixing them into the parent's interface file keeps the import path readable and the layering clean: `import "github.com/proxa-server/proxa/internal/store"` for the interface, `import "github.com/proxa-server/proxa/internal/store/sqlite"` for the impl. `internal/hash/` is a leaf utility imported by both `store/sqlite` and `reconciler` — putting it standalone avoids a layering inversion where the low-level store would otherwise reach up into the high-level coordinator. The new `tests/e2e/` directory holds `//go:build e2e` end-to-end tests that exercise the compiled binary as a subprocess.
 
 ## Complexity Tracking
 
