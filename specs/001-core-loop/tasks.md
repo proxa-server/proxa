@@ -99,7 +99,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T008 Create `internal/store/sqlite/watch.go` implementing `WatchServices` as a polling loop: every `tickInterval/2` (passed via constructor) emit any service in the project whose `updated_at` advanced since the last poll. Returns a channel that closes on ctx cancel. Polling cadence note in `research.md` R-006 (etcd impl in v1.0 will use native watches). Commit: `feat(store/sqlite): implement WatchServices via updated_at polling`.
 
-- [ ] T009 [P] Create `internal/store/sqlite/jobs.go` implementing `PutJob`, `GetJob`, `ListJobs`, `DeleteJob`. Mirror Services' shape. Commit: `feat(store/sqlite): implement Job CRUD`.
+- [X] T009 [P] Create `internal/store/sqlite/jobs.go` implementing `PutJob`, `GetJob`, `ListJobs`, `DeleteJob`. Mirror Services' shape. Commit: `feat(store/sqlite): implement Job CRUD`.
 
 - [ ] T010 [P] Create `internal/store/sqlite/nodes.go` implementing `PutNode`, `GetNode`, `ListNodes`, `DeleteNode`, and `Heartbeat` (single indexed UPDATE, no other side effects). Commit: `feat(store/sqlite): implement Node CRUD and Heartbeat`.
 
