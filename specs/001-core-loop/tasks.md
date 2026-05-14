@@ -103,7 +103,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T010 [P] Create `internal/store/sqlite/nodes.go` implementing `PutNode`, `GetNode`, `ListNodes`, `DeleteNode`, and `Heartbeat` (single indexed UPDATE, no other side effects). Commit: `feat(store/sqlite): implement Node CRUD and Heartbeat`.
 
-- [ ] T011 [P] Create `internal/store/sqlite/auth.go` implementing `PutSubject`, `GetSubject`, `PutPolicy` (rejects `Project="*"` for non-`admin` roles per `data-model.md`), `ListPoliciesFor`, `DeletePolicy`. Commit: `feat(store/sqlite): implement Subject and Policy CRUD`.
+- [X] T011 [P] Create `internal/store/sqlite/auth.go` implementing `PutSubject`, `GetSubject`, `PutPolicy` (rejects `Project="*"` for non-`admin` roles per `data-model.md`), `ListPoliciesFor`, `DeletePolicy`. Commit: `feat(store/sqlite): implement Subject and Policy CRUD`.
 
 - [ ] T012 Create `internal/store/sqlite/tx.go` implementing the `Tx` type and `Tx(ctx, fn)`. Begin transaction, pass a `Tx`-conforming object to `fn`, commit on nil error or rollback on error. Commit: `feat(store/sqlite): implement transactional Tx`.
 
