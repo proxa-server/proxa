@@ -189,7 +189,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### CLI scaffolding (`internal/cli/`) + `cmd/proxa` wire
 
-- [ ] T046 Create `internal/cli/root.go` with `NewRoot() *cobra.Command` setting `Use="proxa"`, the version vars from `internal/version` as `Version`, persistent flags `--data-dir`, `--listen`, `--config`, `--log-level`. Wires viper bindings via `internal/config`. Commit: `feat(cli): add cobra root command with persistent flags`.
+- [X] T046 Create `internal/cli/root.go` with `NewRoot() *cobra.Command` setting `Use="proxa"`, the version vars from `internal/version` as `Version`, persistent flags `--data-dir`, `--listen`, `--config`, `--log-level`. Wires viper bindings via `internal/config`. Commit: `feat(cli): add cobra root command with persistent flags`.
 
 - [ ] T047 Create `internal/cli/client.go` with `httpClient` wrapper: dials Unix socket if `ListenAddr` starts with `unix://`, otherwise TCP; injects `Authorization: Bearer ${PROXA_TOKEN || ${DataDir}/token}` on every request. Methods: `UpsertService`, `Scale`, `Status`, `DeleteService`, `ListServices`. Commit: `feat(cli): add HTTP client wrapper for the API`.
 
