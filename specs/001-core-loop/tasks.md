@@ -167,7 +167,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T036 [P] Add `internal/reconciler/diff_test.go` table-driven covering: scale up (actual<desired), scale down (actual>desired), no change (actual==desired and hashes match), spec drift (hash mismatch → replace), service deletion (desired absent), multi-project independence. Tests are pure-function — no goroutines, no time, no Docker. Commit: `test(reconciler): exhaustive diff matrix`.
 
-- [ ] T037 Create `internal/reconciler/action.go` with `Apply(ctx, runtime.Runtime, Action) error`. Each action type maps to one or more Runtime calls; errors wrap with the action context for log clarity. `CreateContainer` first calls `Runtime.PullImage` (idempotent) then `CreateContainer` then `StartContainer`. Commit: `feat(reconciler): apply actions through Runtime interface`.
+- [X] T037 Create `internal/reconciler/action.go` with `Apply(ctx, runtime.Runtime, Action) error`. Each action type maps to one or more Runtime calls; errors wrap with the action context for log clarity. `CreateContainer` first calls `Runtime.PullImage` (idempotent) then `CreateContainer` then `StartContainer`. Commit: `feat(reconciler): apply actions through Runtime interface`.
 
 - [ ] T038 Create `internal/reconciler/reconciler.go` with `Reconciler` struct + `New(store, runtime, opts) *Reconciler` + `Run(ctx)`. Run loop: `time.NewTicker(opts.TickInterval)` plus a `Poke()` channel for explicit triggers from the API server. Each tick: list services per project, call `Runtime.ListContainers(project)`, compute diff, apply actions. Per-action errors are logged via `slog` and the loop continues. Commit: `feat(reconciler): add tick-driven reconciliation loop with Poke channel`.
 
