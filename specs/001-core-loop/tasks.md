@@ -113,7 +113,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T014 Create `internal/parser/toml/parser.go` with `Parse(r io.Reader) (types.TaskDef, error)` using `github.com/BurntSushi/toml`. Sets `Project="default"` when absent. Commit: `feat(parser/toml): implement TaskDef parsing with project default`.
 
-- [ ] T015 Add `internal/parser/toml/validate.go` with `Validate(types.TaskDef) error` honoring every rule in `contracts/toml-grammar.md`: name/project regex, image non-empty, replicas≥0, strategy enum, security delegated to `security.Validate`, expose protocol enum, port range, resources cgroup syntax, schedule cron format. Each error has a stable code from the grammar contract. Commit: `feat(parser/toml): add TaskDef validation with stable error codes`.
+- [X] T015 Add `internal/parser/toml/validate.go` with `Validate(types.TaskDef) error` honoring every rule in `contracts/toml-grammar.md`: name/project regex, image non-empty, replicas≥0, strategy enum, security delegated to `security.Validate`, expose protocol enum, port range, resources cgroup syntax, schedule cron format. Each error has a stable code from the grammar contract. Commit: `feat(parser/toml): add TaskDef validation with stable error codes`.
 
 - [ ] T016 [P] Add fixtures under `internal/parser/toml/testdata/`: `valid-minimal.toml`, `valid-job.toml`, `valid-stateful.toml`, `invalid-missing-image.toml`, `invalid-bad-name.toml`, `invalid-root-without-allowroot.toml`, `invalid-bad-protocol.toml`. Add `internal/parser/toml/parser_test.go` table-driven against these fixtures, asserting structure for valid inputs and exact error codes for invalid ones. Commit: `test(parser/toml): cover valid + invalid TaskDef fixtures`.
 
