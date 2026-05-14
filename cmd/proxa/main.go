@@ -2,35 +2,27 @@
 // scheduler, ingress, dashboard, DNS, and CLI in a single process
 // (constitution §V).
 //
-// In feature 000-foundation this binary only supports the `version`
-// subcommand. The full server arrives in a later feature.
+// Subcommands are wired by [internal/cli.NewRoot]; this main is just
+// the entrypoint that delegates and reports the cobra error if any.
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/proxa-server/proxa/internal/version"
+	"github.com/proxa-server/proxa/internal/cli"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		usage()
-		os.Exit(2)
-	}
-	switch os.Args[1] {
-	case "version":
-		fmt.Printf("proxa version %s (commit %s, built %s)\n",
-			version.Version, version.Commit, version.BuildDate)
-	default:
-		usage()
-		os.Exit(2)
-	}
-}
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-func usage() {
-	fmt.Fprintln(os.Stderr, "usage: proxa <command>")
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "commands:")
-	fmt.Fprintln(os.Stderr, "  version    print version and exit")
+	root := cli.NewRoot()
+	if err := root.ExecuteContext(ctx); err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		os.Exit(1)
+	}
 }

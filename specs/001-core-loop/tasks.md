@@ -197,7 +197,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T049 Create `internal/cli/server.go` implementing `proxa server`: opens the SQLite store, constructs the Docker runtime, builds the auth chain (Token + Password), wires the reconciler with a Poke channel, hands the Poke channel to the server, calls `server.Start(ctx)`, blocks until SIGINT/SIGTERM, then calls `Shutdown` + cancels reconciler ctx. Commit: `feat(cli): implement proxa server (the daemon)`.
 
-- [ ] T050 Modify `cmd/proxa/main.go` to delegate to `internal/cli.NewRoot().Execute()` instead of the bare `version` printer. Preserve the `version` subcommand (now provided by cobra automatically via `Version` field). Commit: `feat(cmd): wire proxa root command via internal/cli`.
+- [X] T050 Modify `cmd/proxa/main.go` to delegate to `internal/cli.NewRoot().Execute()` instead of the bare `version` printer. Preserve the `version` subcommand (now provided by cobra automatically via `Version` field). Commit: `feat(cmd): wire proxa root command via internal/cli`.
 
 **Checkpoint**: `make build` produces `bin/proxa` with `init`, `server`, `version` subcommands working. Reconciler runs but no service exists yet to reconcile. The CLI flow `init` → `server` → (no `up` yet) is functional end-to-end.
 
