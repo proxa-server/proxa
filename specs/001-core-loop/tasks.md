@@ -111,7 +111,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### TOML parser (`internal/parser/toml/`)
 
-- [ ] T014 Create `internal/parser/toml/parser.go` with `Parse(r io.Reader) (types.TaskDef, error)` using `github.com/BurntSushi/toml`. Sets `Project="default"` when absent. Commit: `feat(parser/toml): implement TaskDef parsing with project default`.
+- [X] T014 Create `internal/parser/toml/parser.go` with `Parse(r io.Reader) (types.TaskDef, error)` using `github.com/BurntSushi/toml`. Sets `Project="default"` when absent. Commit: `feat(parser/toml): implement TaskDef parsing with project default`.
 
 - [ ] T015 Add `internal/parser/toml/validate.go` with `Validate(types.TaskDef) error` honoring every rule in `contracts/toml-grammar.md`: name/project regex, image non-empty, replicas≥0, strategy enum, security delegated to `security.Validate`, expose protocol enum, port range, resources cgroup syntax, schedule cron format. Each error has a stable code from the grammar contract. Commit: `feat(parser/toml): add TaskDef validation with stable error codes`.
 
