@@ -131,7 +131,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T021 Create `internal/auth/dbpolicy/dbpolicy.go` with the real `DBPolicyEngine` that consults `StateStore.ListPoliciesFor` and implements `auth.PolicyEngine`. Authorize logic: `RoleAdmin` matches every (verb, kind, project); `RoleEditor` matches CRUD on services/jobs/secrets within scoped project; `RoleViewer` matches get/list within scoped project; `RoleAgent` matches get on services/jobs in any project + update on Heartbeat for own node. Empty `Project` for project-scoped kinds → `ErrForbidden`. ALSO delete the `noopPolicyEngine` (and its compile-time `var _` assertion) from `internal/auth/policy.go` — `dbpolicy.New()` is now the production impl; tests that need a fake should hand-roll one in their own `*_test.go`. Commit: `feat(auth/dbpolicy): add StateStore-backed PolicyEngine and remove noop`.
 
-- [ ] T022 [P] Add `internal/auth/dbpolicy/dbpolicy_test.go` table-driven across the role × verb × kind matrix; uses a fake StateStore returning fixed Policy lists. Commit: `test(auth/dbpolicy): cover PolicyEngine role matrix`.
+- [X] T022 [P] Add `internal/auth/dbpolicy/dbpolicy_test.go` table-driven across the role × verb × kind matrix; uses a fake StateStore returning fixed Policy lists. Commit: `test(auth/dbpolicy): cover PolicyEngine role matrix`.
 
 ### Docker `Runtime` impl (`internal/runtime/docker/`)
 
