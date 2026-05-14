@@ -143,7 +143,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T026 [P] Add `internal/runtime/docker/security_test.go` table-driven: zero `SecurityProfile{}` yields `CapDrop=[ALL]` + `no-new-privileges:true` + `Config.User="1000:1000"` in output (FR-002 default verification); explicit `AllowRoot+User=root` honored as `Config.User="root"`; explicit non-empty `User="500:500"` propagates verbatim. The test does NOT touch Docker — it exercises the spec-mapping function directly. Commit: `test(runtime/docker): verify SecurityProfile mapping including FR-002 default user`.
 
-- [ ] T027 Create `internal/runtime/docker/docker.go` with `New(ctx) (*dockerRuntime, error)` (uses `client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())`), `Name() string` returning `"docker"`, `Version(ctx) (string, error)`. Commit: `feat(runtime/docker): add dockerRuntime constructor and identity methods`.
+- [X] T027 Create `internal/runtime/docker/docker.go` with `New(ctx) (*dockerRuntime, error)` (uses `client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())`), `Name() string` returning `"docker"`, `Version(ctx) (string, error)`. Commit: `feat(runtime/docker): add dockerRuntime constructor and identity methods`.
 
 - [ ] T028 Create `internal/runtime/docker/image.go` implementing `PullImage` and `InspectImage`. PullImage drains the API stream and returns nil on success; logs progress via `slog`. Commit: `feat(runtime/docker): implement image Pull and Inspect`.
 
