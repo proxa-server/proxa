@@ -1,0 +1,67 @@
+package types
+
+import "time"
+
+// TaskDef is the parsed representation of a user TOML file describing
+// a service or a job. It is the input to the reconciliation loop.
+type TaskDef struct {
+	Project   string            `toml:"project"   json:"project"`
+	Name      string            `toml:"name"      json:"name"`
+	Image     string            `toml:"image"     json:"image"`
+	Replicas  int               `toml:"replicas"  json:"replicas"`           // services only
+	Stateful  bool              `toml:"stateful"  json:"stateful"`           // affects deploy strategy + scheduling
+	Security  SecurityProfile   `toml:"security"  json:"security"`           // see security.go
+	Env       map[string]string `toml:"env"       json:"env,omitempty"`
+	Volumes   []VolumeMount     `toml:"volumes"   json:"volumes,omitempty"`
+	Expose    []PortSpec        `toml:"expose"    json:"expose,omitempty"`
+	Strategy  DeployStrategy    `toml:"strategy"  json:"strategy"`           // start-first | stop-first
+	Health    HealthCheck       `toml:"health"    json:"health"`
+	Resources ResourceLimits    `toml:"resources" json:"resources"`
+	Schedule  string            `toml:"schedule"  json:"schedule,omitempty"` // cron expr; jobs only
+}
+
+// VolumeMount is a host-path or named-volume mount for a container.
+type VolumeMount struct {
+	Source   string `toml:"source"   json:"source"`
+	Target   string `toml:"target"   json:"target"`
+	ReadOnly bool   `toml:"readonly" json:"readOnly"`
+}
+
+// PortSpec describes a port exposed by a container. A Host of 0 means
+// the port is reachable only via the ingress controller, not bound to
+// the host directly.
+type PortSpec struct {
+	Container int    `toml:"container" json:"container"`
+	Host      int    `toml:"host"      json:"host,omitempty"`
+	Protocol  string `toml:"protocol"  json:"protocol"` // tcp | udp | http | https
+}
+
+// DeployStrategy controls how the reconciler swaps replicas during a
+// deployment. Stateless services default to StartFirst (zero-downtime);
+// stateful services default to StopFirst (data-safe).
+type DeployStrategy string
+
+const (
+	StrategyStartFirst DeployStrategy = "start-first"
+	StrategyStopFirst  DeployStrategy = "stop-first"
+)
+
+// HealthCheck describes how the reconciler probes a container. Either
+// Path+Port (HTTP probe) or Command (exec probe) is set; both is invalid.
+type HealthCheck struct {
+	Path     string        `toml:"path"     json:"path,omitempty"`
+	Port     int           `toml:"port"     json:"port,omitempty"`
+	Command  []string      `toml:"command"  json:"command,omitempty"`
+	Interval time.Duration `toml:"interval" json:"interval"`
+	Timeout  time.Duration `toml:"timeout"  json:"timeout"`
+	Retries  int           `toml:"retries"  json:"retries"`
+}
+
+// ResourceLimits are the per-container resource caps passed through to
+// the runtime. Strings (rather than typed numbers) match the cgroup-style
+// syntax users expect: "500m", "2Gi", etc.
+type ResourceLimits struct {
+	CPU       string `toml:"cpu"       json:"cpu,omitempty"`
+	Memory    string `toml:"memory"    json:"memory,omitempty"`
+	PidsLimit int    `toml:"pidsLimit" json:"pidsLimit,omitempty"`
+}
