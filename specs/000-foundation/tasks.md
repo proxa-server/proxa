@@ -130,7 +130,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 **Purpose**: Tooling and release scaffolding so the success criteria (SC-001 through SC-005) can be claimed PASS.
 
-- [ ] T027 Create `Makefile` at repo root with phony targets `build` (builds both binaries into `bin/` with `CGO_ENABLED=0` and `-ldflags` injecting version/commit/date from `git describe`/`git rev-parse`), `test` (`go test ./...`), `lint` (`go vet ./... && staticcheck ./...` — `staticcheck` invoked via `go run honnef.co/go/tools/cmd/staticcheck@v0.7.0` so it doesn't need to be globally installed), `clean` (`rm -rf bin/`), and `tidy` (`go mod tidy`). Commit: `chore(build): add Makefile with build/test/lint/clean/tidy targets`.
+- [X] T027 Create `Makefile` at repo root with phony targets `build` (builds both binaries into `bin/` with `CGO_ENABLED=0` and `-ldflags` injecting version/commit/date from `git describe`/`git rev-parse`), `test` (`go test ./...`), `lint` (`go vet ./... && staticcheck ./...` — `staticcheck` invoked via `go run honnef.co/go/tools/cmd/staticcheck@v0.7.0` so it doesn't need to be globally installed), `clean` (`rm -rf bin/`), and `tidy` (`go mod tidy`). Commit: `chore(build): add Makefile with build/test/lint/clean/tidy targets`.
 
 - [ ] T028 [P] Create `.github/workflows/ci.yml`: on push to any branch and on PR to `main`, run a matrix of `{os: ubuntu-latest, macos-latest}` × `{go: '1.26.x'}` executing `go vet ./...`, `go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...`, `go test -race -count=1 ./...`, `go build ./...` (with `CGO_ENABLED=0`). Cache the module cache. Commit: `chore(ci): add GitHub Actions workflow (vet, staticcheck, test, build)`.
 
