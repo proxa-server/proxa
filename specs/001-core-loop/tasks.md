@@ -195,7 +195,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T048 Create `internal/cli/init.go` implementing `proxa init` per `quickstart.md` step 1: ensure DataDir exists, open SQLite, run `Migrate`, generate the master key (`crypto/rand.Read(32)` → `${DataDir}/secrets.key` mode 0600), generate the bootstrap token, hash with bcrypt, insert as a `bootstrap` subject, write plaintext to `${DataDir}/token` mode 0600 AND print to stdout exactly once. Generate the local admin user with a random password, insert hashed, print plaintext. Commit: `feat(cli): implement proxa init`.
 
-- [ ] T049 Create `internal/cli/server.go` implementing `proxa server`: opens the SQLite store, constructs the Docker runtime, builds the auth chain (Token + Password), wires the reconciler with a Poke channel, hands the Poke channel to the server, calls `server.Start(ctx)`, blocks until SIGINT/SIGTERM, then calls `Shutdown` + cancels reconciler ctx. Commit: `feat(cli): implement proxa server (the daemon)`.
+- [X] T049 Create `internal/cli/server.go` implementing `proxa server`: opens the SQLite store, constructs the Docker runtime, builds the auth chain (Token + Password), wires the reconciler with a Poke channel, hands the Poke channel to the server, calls `server.Start(ctx)`, blocks until SIGINT/SIGTERM, then calls `Shutdown` + cancels reconciler ctx. Commit: `feat(cli): implement proxa server (the daemon)`.
 
 - [ ] T050 Modify `cmd/proxa/main.go` to delegate to `internal/cli.NewRoot().Execute()` instead of the bare `version` printer. Preserve the `version` subcommand (now provided by cobra automatically via `Version` field). Commit: `feat(cmd): wire proxa root command via internal/cli`.
 
