@@ -71,7 +71,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 **Purpose**: Land the seven third-party deps in `go.mod`, scaffold the new package directories, and commit a transitive-dep license audit baseline.
 
-- [ ] T001 Add the seven primary deps to `go.mod` via `go get` (one per dep, then `go mod tidy`): `modernc.org/sqlite`, `github.com/docker/docker`, `github.com/BurntSushi/toml`, `github.com/go-chi/chi/v5`, `github.com/spf13/cobra`, `github.com/spf13/viper`, `golang.org/x/crypto/bcrypt`. Verify build still succeeds (`CGO_ENABLED=0 go build ./...`). Commit: `chore(build): add seven third-party deps for core-loop`.
+- [X] T001 Add the seven primary deps to `go.mod` via `go get` (one per dep, then `go mod tidy`): `modernc.org/sqlite`, `github.com/docker/docker`, `github.com/BurntSushi/toml`, `github.com/go-chi/chi/v5`, `github.com/spf13/cobra`, `github.com/spf13/viper`, `golang.org/x/crypto/bcrypt`. Verify build still succeeds (`CGO_ENABLED=0 go build ./...`). Commit: `chore(build): add seven third-party deps for core-loop`.
 
 - [ ] T002 Create the new package directory skeleton with `.gitkeep` placeholders: `internal/store/sqlite/`, `internal/runtime/docker/`, `internal/auth/token/`, `internal/auth/password/`, `internal/parser/toml/{,testdata}/`, `internal/reconciler/`, `internal/server/`, `internal/cli/`, `internal/config/`. Commit: `chore(repo): scaffold internal package skeleton for core-loop`.
 
