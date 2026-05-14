@@ -32,7 +32,10 @@ jobs:
       - name: Verify go.mod tidy
         run: |
           go mod tidy
-          git diff --exit-code go.mod go.sum
+          git diff --exit-code go.mod
+          # go.sum is absent when there are zero third-party deps (FR-009);
+          # only check it for diff if the file exists.
+          test ! -f go.sum || git diff --exit-code go.sum
 
       - name: go vet
         run: go vet ./...
