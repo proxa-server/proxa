@@ -211,7 +211,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Implementation for User Story 1
 
-- [ ] T051 [US1] Create `internal/cli/up.go` implementing `proxa up <file>`: **first check that `${DataDir}/token` exists; if absent, print `error: proxa not initialized; run \`proxa init\` first` and exit 1** (FR-007 / SC-007 honors the spec's "without proxa init" wording). Then read the file, call `parser/toml.Parse` + `Validate`, then `client.UpsertService(taskdef)`. Print the result. Exit 1 on validation error with the error code prefix from the grammar contract. Commit: `feat(cli): implement proxa up with init-state precheck`.
+- [X] T051 [US1] Create `internal/cli/up.go` implementing `proxa up <file>`: **first check that `${DataDir}/token` exists; if absent, print `error: proxa not initialized; run \`proxa init\` first` and exit 1** (FR-007 / SC-007 honors the spec's "without proxa init" wording). Then read the file, call `parser/toml.Parse` + `Validate`, then `client.UpsertService(taskdef)`. Print the result. Exit 1 on validation error with the error code prefix from the grammar contract. Commit: `feat(cli): implement proxa up with init-state precheck`.
 
 - [ ] T052 [US1] Add `internal/cli/up_test.go` covering: valid TOML round-trip via httptest server, validation-error message formatting, file-not-found exit code. Commit: `test(cli): cover proxa up command paths`.
 
