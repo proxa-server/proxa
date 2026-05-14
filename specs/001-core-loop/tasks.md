@@ -181,7 +181,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T042 Create `internal/server/middleware.go` with `RequireAuth(authenticator) Middleware` that calls `Authenticate` and stores the resulting `*types.Subject` in `r.Context()`. Failures return 401 with the JSON error envelope from `contracts/rest-api.md`. Add `RequirePolicy(engine, kind, verb)` middleware that pulls the Subject from context and calls `Authorize`; failures return 403. Commit: `feat(server): add auth and authz middlewares`.
 
-- [ ] T043 Create `internal/server/routes.go` mounting the `/api/v1` chi router with the eight endpoints from `contracts/rest-api.md`. Each route uses `RequireAuth` + appropriate `RequirePolicy`. Commit: `feat(server): wire /api/v1 routes via chi`.
+- [X] T043 Create `internal/server/routes.go` mounting the `/api/v1` chi router with the eight endpoints from `contracts/rest-api.md`. Each route uses `RequireAuth` + appropriate `RequirePolicy`. Commit: `feat(server): wire /api/v1 routes via chi`.
 
 - [ ] T044 Create `internal/server/handlers.go` implementing the eight handler functions. `PUT services/{name}` re-validates the spec via `parser/toml.Validate` (the JSON-decoded TaskDef must still satisfy the same rules), persists, and pokes the reconciler via the channel passed at construction. Commit: `feat(server): implement REST handlers with reconciler poke`.
 
