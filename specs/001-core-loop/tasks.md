@@ -157,7 +157,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Hash utility (`internal/hash/`) — leaf package, imported by both store/sqlite and reconciler
 
-- [ ] T033 Create `internal/hash/hash.go` with `Hash(types.TaskDef) string` returning `"sha256:" + hex(sha256(canonicalJSON(spec)))`. CanonicalJSON sorts keys recursively. Imports stdlib + `pkg/types` only — leaf package, no other internal/* imports. (Placement here, not in `internal/reconciler/`, prevents the layering inversion of `store/sqlite` having to import a coordinator package.) Commit: `feat(hash): add canonical-JSON SHA-256 helper for TaskDefs`.
+- [X] T033 Create `internal/hash/hash.go` with `Hash(types.TaskDef) string` returning `"sha256:" + hex(sha256(canonicalJSON(spec)))`. CanonicalJSON sorts keys recursively. Imports stdlib + `pkg/types` only — leaf package, no other internal/* imports. (Placement here, not in `internal/reconciler/`, prevents the layering inversion of `store/sqlite` having to import a coordinator package.) Commit: `feat(hash): add canonical-JSON SHA-256 helper for TaskDefs`.
 
 - [ ] T034 [P] Add `internal/hash/hash_test.go` covering: identical specs hash equal across map ordering and slice append-order edge cases; different image yields different hash; semantically equivalent omitempty fields hash equal. Commit: `test(hash): cover hash determinism across map orderings`.
 
