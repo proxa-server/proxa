@@ -91,7 +91,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T004 Create `internal/store/sqlite/sqlite.go` with `New() *sqliteStore`, `Open(ctx, dsn)` (opens via `modernc.org/sqlite`, sets `PRAGMA journal_mode=WAL`, `PRAGMA foreign_keys=ON`, `PRAGMA busy_timeout=5000`), `Close()`, and a `db` field carrying the `*sql.DB`. Commit: `feat(store/sqlite): add sqliteStore lifecycle (Open/Close)`.
 
-- [ ] T005 Create `internal/store/sqlite/migrations.go` with `Migrate(ctx)` honoring `data-model.md` v1 schema: `schema_version`, `projects`, `services`, `jobs`, `nodes`, `subjects`, `policies` tables with indexes; idempotent re-run; inserts the `default` project as part of v1. Commit: `feat(store/sqlite): add v1 schema migrations`.
+- [X] T005 Create `internal/store/sqlite/migrations.go` with `Migrate(ctx)` honoring `data-model.md` v1 schema: `schema_version`, `projects`, `services`, `jobs`, `nodes`, `subjects`, `policies` tables with indexes; idempotent re-run; inserts the `default` project as part of v1. Commit: `feat(store/sqlite): add v1 schema migrations`.
 
 - [ ] T006 Create `internal/store/sqlite/projects.go` implementing `CreateProject`, `GetProject`, `ListProjects`, `DeleteProject`. Reject project names not matching `^[a-z0-9][a-z0-9-]{0,62}$`. Commit: `feat(store/sqlite): implement project CRUD`.
 
