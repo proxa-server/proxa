@@ -135,7 +135,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Docker `Runtime` impl (`internal/runtime/docker/`)
 
-- [ ] T023 Create `internal/runtime/docker/labels.go` exporting the seven label keys (`Managed`, `Project`, `Service`, `Replica`, `SpecHash`, `NodeID`, `CreatedAt`) per `data-model.md`. Helpers `BuildContainerLabels(spec) map[string]string` and `ContainerNameFor(project, service, replica) string` (returns `proxa-{project}-{service}-{replica}`). Commit: `feat(runtime/docker): add label and naming helpers`.
+- [X] T023 Create `internal/runtime/docker/labels.go` exporting the seven label keys (`Managed`, `Project`, `Service`, `Replica`, `SpecHash`, `NodeID`, `CreatedAt`) per `data-model.md`. Helpers `BuildContainerLabels(spec) map[string]string` and `ContainerNameFor(project, service, replica) string` (returns `proxa-{project}-{service}-{replica}`). Commit: `feat(runtime/docker): add label and naming helpers`.
 
 - [ ] T024 [P] Add `internal/runtime/docker/labels_test.go` covering label population, name format edge cases (long project + service names should not exceed Docker's 253-char limit). Commit: `test(runtime/docker): cover label and name builders`.
 
