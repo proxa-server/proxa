@@ -93,7 +93,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T005 Create `internal/store/sqlite/migrations.go` with `Migrate(ctx)` honoring `data-model.md` v1 schema: `schema_version`, `projects`, `services`, `jobs`, `nodes`, `subjects`, `policies` tables with indexes; idempotent re-run; inserts the `default` project as part of v1. Commit: `feat(store/sqlite): add v1 schema migrations`.
 
-- [ ] T006 Create `internal/store/sqlite/projects.go` implementing `CreateProject`, `GetProject`, `ListProjects`, `DeleteProject`. Reject project names not matching `^[a-z0-9][a-z0-9-]{0,62}$`. Commit: `feat(store/sqlite): implement project CRUD`.
+- [X] T006 Create `internal/store/sqlite/projects.go` implementing `CreateProject`, `GetProject`, `ListProjects`, `DeleteProject`. Reject project names not matching `^[a-z0-9][a-z0-9-]{0,62}$`. Commit: `feat(store/sqlite): implement project CRUD`.
 
 - [ ] T007 Create `internal/store/sqlite/services.go` implementing `PutService` (re-computes `spec_hash` from canonical JSON; rejects mismatched `project`/`name` between row and spec), `GetService`, `ListServices`, `DeleteService`. The `replicas_json` and `history_json` columns round-trip through JSON. Imports `internal/hash` for `hash.Hash` (added in T033a; placed in its own leaf package to avoid the layering inversion of having `store/sqlite` reach up into `reconciler`). Commit: `feat(store/sqlite): implement Service CRUD with spec hashing`.
 
