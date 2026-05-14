@@ -145,7 +145,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T027 Create `internal/runtime/docker/docker.go` with `New(ctx) (*dockerRuntime, error)` (uses `client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())`), `Name() string` returning `"docker"`, `Version(ctx) (string, error)`. Commit: `feat(runtime/docker): add dockerRuntime constructor and identity methods`.
 
-- [ ] T028 Create `internal/runtime/docker/image.go` implementing `PullImage` and `InspectImage`. PullImage drains the API stream and returns nil on success; logs progress via `slog`. Commit: `feat(runtime/docker): implement image Pull and Inspect`.
+- [X] T028 Create `internal/runtime/docker/image.go` implementing `PullImage` and `InspectImage`. PullImage drains the API stream and returns nil on success; logs progress via `slog`. Commit: `feat(runtime/docker): implement image Pull and Inspect`.
 
 - [ ] T029 Create `internal/runtime/docker/container.go` implementing `CreateContainer` (calls `applySecurityProfile`, attaches labels, sets the proxa-managed name), `StartContainer`, `StopContainer` (honors `gracePeriod`), `RemoveContainer`, `InspectContainer`, and `ListContainers` (REJECTS empty `Project` filter; passes `label=proxa.managed=true` and `label=proxa.project=<X>` to Docker filters). Commit: `feat(runtime/docker): implement container lifecycle methods`.
 
