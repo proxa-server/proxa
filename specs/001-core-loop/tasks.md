@@ -153,7 +153,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T031 [P] Add `internal/runtime/docker/mockclient_test.go` defining a tiny in-package `dockerClient` interface (only the methods we call) and a fake; refactor `dockerRuntime` to take this interface so unit tests can swap it. Add `internal/runtime/docker/container_test.go` exercising create+list+inspect against the mock, asserting label propagation and `ListContainers("")` returns an error. Commit: `test(runtime/docker): add mock client and unit tests for container ops`.
 
-- [ ] T032 Add `internal/runtime/docker/integration_test.go` build-tagged `//go:build dockerd`. Tests: pull `nginx:alpine`, create with `security.Default()`, start, `docker inspect` via the runtime confirms `CapDrop=[ALL]` + `NoNewPrivileges:true`, stop, remove. Skipped when the build tag is absent. Add `make test-integration` target that runs `go test -tags dockerd -count=1 ./...`. Commit: `test(runtime/docker): add dockerd-tagged integration tests`.
+- [X] T032 Add `internal/runtime/docker/integration_test.go` build-tagged `//go:build dockerd`. Tests: pull `nginx:alpine`, create with `security.Default()`, start, `docker inspect` via the runtime confirms `CapDrop=[ALL]` + `NoNewPrivileges:true`, stop, remove. Skipped when the build tag is absent. Add `make test-integration` target that runs `go test -tags dockerd -count=1 ./...`. Commit: `test(runtime/docker): add dockerd-tagged integration tests`.
 
 ### Hash utility (`internal/hash/`) — leaf package, imported by both store/sqlite and reconciler
 
