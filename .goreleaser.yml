@@ -1,0 +1,76 @@
+# GoReleaser config for Proxa.
+#
+# This file is scaffolded. The release workflow that triggers it (on a
+# git tag push) lands in a later feature; for now the config is a
+# reference for the multi-arch build matrix.
+#
+# Local dry run:
+#   goreleaser release --snapshot --skip=publish --clean
+
+version: 2
+
+project_name: proxa
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: proxa
+    main: ./cmd/proxa
+    binary: proxa
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/proxa-server/proxa/internal/version.Version={{.Version}}
+      - -X github.com/proxa-server/proxa/internal/version.Commit={{.ShortCommit}}
+      - -X github.com/proxa-server/proxa/internal/version.BuildDate={{.Date}}
+
+  - id: proxa-agent
+    main: ./cmd/proxa-agent
+    binary: proxa-agent
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/proxa-server/proxa/internal/version.Version={{.Version}}
+      - -X github.com/proxa-server/proxa/internal/version.Commit={{.ShortCommit}}
+      - -X github.com/proxa-server/proxa/internal/version.BuildDate={{.Date}}
+
+archives:
+  - id: default
+    ids:
+      - proxa
+      - proxa-agent
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  version_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"

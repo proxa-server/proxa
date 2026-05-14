@@ -134,7 +134,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`. Types: `f
 
 - [X] T028 [P] Create `.github/workflows/ci.yml`: on push to any branch and on PR to `main`, run a matrix of `{os: ubuntu-latest, macos-latest}` × `{go: '1.26.x'}` executing `go vet ./...`, `go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...`, `go test -race -count=1 ./...`, `go build ./...` (with `CGO_ENABLED=0`). Cache the module cache. Commit: `chore(ci): add GitHub Actions workflow (vet, staticcheck, test, build)`.
 
-- [ ] T029 [P] Create `.goreleaser.yml` scaffolding multi-arch builds for `linux/{amd64,arm64}` and `darwin/{amd64,arm64}` of both `cmd/proxa` and `cmd/proxa-agent`. `CGO_ENABLED=0`. `archives` block produces tar.gz with `LICENSE` + `README.md` included. **Do not** wire a `release` workflow yet (no tag triggers); this is scaffolding only. Commit: `chore(build): scaffold goreleaser config for multi-arch release`.
+- [X] T029 [P] Create `.goreleaser.yml` scaffolding multi-arch builds for `linux/{amd64,arm64}` and `darwin/{amd64,arm64}` of both `cmd/proxa` and `cmd/proxa-agent`. `CGO_ENABLED=0`. `archives` block produces tar.gz with `LICENSE` + `README.md` included. **Do not** wire a `release` workflow yet (no tag triggers); this is scaffolding only. Commit: `chore(build): scaffold goreleaser config for multi-arch release`.
 
 - [ ] T030 Run the quickstart validation checklist from `quickstart.md` end-to-end: clean clone of `000-foundation` branch, `make build`, `make test`, `make lint`, `./bin/proxa version`, `./bin/proxa-agent version`, confirm CI green on push. If any item fails, file a follow-up task and do not mark this complete. Commit: `docs(spec): record quickstart validation results in specs/000-foundation/`.
 
