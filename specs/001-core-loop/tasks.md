@@ -147,7 +147,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T028 Create `internal/runtime/docker/image.go` implementing `PullImage` and `InspectImage`. PullImage drains the API stream and returns nil on success; logs progress via `slog`. Commit: `feat(runtime/docker): implement image Pull and Inspect`.
 
-- [ ] T029 Create `internal/runtime/docker/container.go` implementing `CreateContainer` (calls `applySecurityProfile`, attaches labels, sets the proxa-managed name), `StartContainer`, `StopContainer` (honors `gracePeriod`), `RemoveContainer`, `InspectContainer`, and `ListContainers` (REJECTS empty `Project` filter; passes `label=proxa.managed=true` and `label=proxa.project=<X>` to Docker filters). Commit: `feat(runtime/docker): implement container lifecycle methods`.
+- [X] T029 Create `internal/runtime/docker/container.go` implementing `CreateContainer` (calls `applySecurityProfile`, attaches labels, sets the proxa-managed name), `StartContainer`, `StopContainer` (honors `gracePeriod`), `RemoveContainer`, `InspectContainer`, and `ListContainers` (REJECTS empty `Project` filter; passes `label=proxa.managed=true` and `label=proxa.project=<X>` to Docker filters). Commit: `feat(runtime/docker): implement container lifecycle methods`.
 
 - [ ] T030 Create `internal/runtime/docker/exec.go` implementing `Exec`, `Stats` (snapshot, not stream — caller polls), and `StreamLogs` (returns `io.ReadCloser` that closes the underlying API stream when caller closes). Commit: `feat(runtime/docker): implement Exec, Stats, and StreamLogs`.
 
