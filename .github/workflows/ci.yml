@@ -44,6 +44,15 @@ jobs:
         run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
 
       - name: go test
+        # The race detector requires cgo on linux/amd64 (it links the
+        # TSAN C runtime). Job-level CGO_ENABLED=0 keeps build/vet/
+        # staticcheck/build under §V (single static binary) but breaks
+        # `go test -race` on ubuntu-latest. Override here so race is
+        # exercised on every platform. Our code is pure Go — no
+        # behavioral drift between cgo-enabled tests and cgo-disabled
+        # production binaries.
+        env:
+          CGO_ENABLED: "1"
         run: go test -race -count=1 ./...
 
       - name: go build
