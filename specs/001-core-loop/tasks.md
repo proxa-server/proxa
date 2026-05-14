@@ -149,7 +149,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T029 Create `internal/runtime/docker/container.go` implementing `CreateContainer` (calls `applySecurityProfile`, attaches labels, sets the proxa-managed name), `StartContainer`, `StopContainer` (honors `gracePeriod`), `RemoveContainer`, `InspectContainer`, and `ListContainers` (REJECTS empty `Project` filter; passes `label=proxa.managed=true` and `label=proxa.project=<X>` to Docker filters). Commit: `feat(runtime/docker): implement container lifecycle methods`.
 
-- [ ] T030 Create `internal/runtime/docker/exec.go` implementing `Exec`, `Stats` (snapshot, not stream — caller polls), and `StreamLogs` (returns `io.ReadCloser` that closes the underlying API stream when caller closes). Commit: `feat(runtime/docker): implement Exec, Stats, and StreamLogs`.
+- [X] T030 Create `internal/runtime/docker/exec.go` implementing `Exec`, `Stats` (snapshot, not stream — caller polls), and `StreamLogs` (returns `io.ReadCloser` that closes the underlying API stream when caller closes). Commit: `feat(runtime/docker): implement Exec, Stats, and StreamLogs`.
 
 - [ ] T031 [P] Add `internal/runtime/docker/mockclient_test.go` defining a tiny in-package `dockerClient` interface (only the methods we call) and a fake; refactor `dockerRuntime` to take this interface so unit tests can swap it. Add `internal/runtime/docker/container_test.go` exercising create+list+inspect against the mock, asserting label propagation and `ListContainers("")` returns an error. Commit: `test(runtime/docker): add mock client and unit tests for container ops`.
 
