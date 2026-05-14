@@ -183,7 +183,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T043 Create `internal/server/routes.go` mounting the `/api/v1` chi router with the eight endpoints from `contracts/rest-api.md`. Each route uses `RequireAuth` + appropriate `RequirePolicy`. Commit: `feat(server): wire /api/v1 routes via chi`.
 
-- [ ] T044 Create `internal/server/handlers.go` implementing the eight handler functions. `PUT services/{name}` re-validates the spec via `parser/toml.Validate` (the JSON-decoded TaskDef must still satisfy the same rules), persists, and pokes the reconciler via the channel passed at construction. Commit: `feat(server): implement REST handlers with reconciler poke`.
+- [X] T044 Create `internal/server/handlers.go` implementing the eight handler functions. `PUT services/{name}` re-validates the spec via `parser/toml.Validate` (the JSON-decoded TaskDef must still satisfy the same rules), persists, and pokes the reconciler via the channel passed at construction. Commit: `feat(server): implement REST handlers with reconciler poke`.
 
 - [ ] T045 [P] Add `internal/server/server_test.go` using `httptest.NewServer` against an in-memory store + fake runtime + fake authenticator: round-trip a service via `PUT` → `GET`, scale via `POST .../scale`, list via `system/status`, auth-required gate (401 without Bearer). Commit: `test(server): cover REST handler round-trip with fakes`.
 
