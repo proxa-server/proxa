@@ -185,7 +185,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T044 Create `internal/server/handlers.go` implementing the eight handler functions. `PUT services/{name}` re-validates the spec via `parser/toml.Validate` (the JSON-decoded TaskDef must still satisfy the same rules), persists, and pokes the reconciler via the channel passed at construction. Commit: `feat(server): implement REST handlers with reconciler poke`.
 
-- [ ] T045 [P] Add `internal/server/server_test.go` using `httptest.NewServer` against an in-memory store + fake runtime + fake authenticator: round-trip a service via `PUT` → `GET`, scale via `POST .../scale`, list via `system/status`, auth-required gate (401 without Bearer). Commit: `test(server): cover REST handler round-trip with fakes`.
+- [X] T045 [P] Add `internal/server/server_test.go` using `httptest.NewServer` against an in-memory store + fake runtime + fake authenticator: round-trip a service via `PUT` → `GET`, scale via `POST .../scale`, list via `system/status`, auth-required gate (401 without Bearer). Commit: `test(server): cover REST handler round-trip with fakes`.
 
 ### CLI scaffolding (`internal/cli/`) + `cmd/proxa` wire
 
