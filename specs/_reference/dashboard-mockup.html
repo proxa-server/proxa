@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>Proxa · Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"></script>
+<style>
+[x-cloak]{display:none!important}
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fafbf9;
+  --surface:#ffffff;
+  --surface-2:#f3f5f1;
+  --surface-3:#e8ebe4;
+  --border:#dde1d8;
+  --border-strong:#cdd2c6;
+  --fg:#141a12;
+  --fg-2:#343a30;
+  --fg-3:#6b7366;
+  --fg-4:#99a192;
+  --brand:#2a9d8f;
+  --brand-2:#1f7a6f;
+  --brand-soft:#eaf7f5;
+  --brand-tint:#d4f0ec;
+  --ink:#0c100a;
+  --accent-violet:#6f5ad6;
+  --accent-teal:#0d8a72;
+  --accent-amber:#b07700;
+  --accent-rose:#c84064;
+  --green:#1f8a4c;
+  --red:#cc2e3d;
+  --shadow-sm:0 1px 2px rgba(12,16,10,.04),0 1px 1px rgba(12,16,10,.03);
+  --shadow:0 1px 2px rgba(12,16,10,.04),0 4px 12px rgba(12,16,10,.06);
+  --shadow-lg:0 4px 8px rgba(12,16,10,.04),0 12px 32px rgba(12,16,10,.08);
+  --shadow-xl:0 8px 16px rgba(12,16,10,.06),0 24px 64px rgba(12,16,10,.12);
+  --r-sm:6px;--r:8px;--r-lg:12px;--r-xl:16px;--r-2xl:20px;
+  --serif:"Instrument Serif",Georgia,serif;
+}
+body[data-theme="dark"]{
+  --bg:#0c0f0a;
+  --surface:#131712;
+  --surface-2:#1a1e18;
+  --surface-3:#23281f;
+  --border:#2a3026;
+  --border-strong:#3a4234;
+  --fg:#edf0e8;
+  --fg-2:#c0c6b8;
+  --fg-3:#7e8674;
+  --fg-4:#545c4a;
+  --brand:#3eb89c;
+  --brand-2:#5ccdb3;
+  --brand-soft:rgba(62,184,156,.10);
+  --brand-tint:rgba(62,184,156,.18);
+  --ink:#edf0e8;
+  --accent-violet:#a394e8;
+  --accent-teal:#3eb89c;
+  --accent-amber:#e0a847;
+  --accent-rose:#e87490;
+  --green:#5cc680;
+  --red:#ff6b7a;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow:0 4px 12px rgba(0,0,0,.4);
+  --shadow-lg:0 12px 32px rgba(0,0,0,.5);
+  --shadow-xl:0 24px 64px rgba(0,0,0,.6);
+}
+
+html,body{background:var(--bg);color:var(--fg);font-family:"Geist",-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;font-feature-settings:"ss01","cv11"}
+.mono{font-family:"Geist Mono",ui-monospace,monospace;font-feature-settings:"calt" 0}
+.serif{font-family:var(--serif);font-weight:400}
+
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:10px;border:2px solid var(--bg);background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:var(--fg-4);background-clip:padding-box;border:2px solid var(--bg)}
+
+/* ============ TOP NAV ============ */
+.topnav{position:sticky;top:0;z-index:50;background:rgba(250,251,249,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;padding:0 16px;gap:16px}
+body[data-theme="dark"] .topnav{background:rgba(12,15,10,.85)}
+.brand{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--fg)}
+.brand svg{width:24px;height:24px}
+.brand .wordmark{font-size:16px;font-weight:600;letter-spacing:-0.02em}
+.brand .badge{font-size:9.5px;font-weight:600;color:var(--brand);background:var(--brand-soft);padding:2px 6px;border-radius:4px;letter-spacing:0.02em}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:6px}
+.icon-btn{width:30px;height:30px;display:grid;place-items:center;border-radius:6px;background:transparent;border:none;cursor:pointer;color:var(--fg-3);transition:all .15s}
+.icon-btn:hover{background:var(--surface-2);color:var(--fg)}
+.icon-btn svg{width:15px;height:15px}
+.cluster-status{display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;font-size:11.5px;font-family:"Geist Mono";color:var(--fg-3)}
+
+/* ============ LAYOUT ============ */
+.shell{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 52px)}
+.sidebar{border-right:1px solid var(--border);background:var(--bg);padding:12px 8px;display:flex;flex-direction:column;gap:2px}
+.side-label{font-size:10px;font-weight:600;color:var(--fg-3);letter-spacing:0.06em;text-transform:uppercase;padding:8px 10px 4px}
+.side-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--fg-2);text-decoration:none;transition:background .12s;border:none;background:transparent;width:100%;font-family:inherit}
+.side-item:hover{background:var(--surface-2)}
+.side-item.active{background:var(--surface);color:var(--fg);font-weight:500;box-shadow:var(--shadow-sm)}
+.side-item svg{width:14px;height:14px;color:var(--fg-3);flex-shrink:0}
+.side-item.active svg{color:var(--brand)}
+.side-item .count{margin-left:auto;font-size:11px;color:var(--fg-4);font-family:"Geist Mono"}
+.side-sep{height:1px;background:var(--border);margin:6px 8px}
+
+/* ============ COMMON ============ */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;font-size:12.5px;font-weight:500;border-radius:7px;border:1px solid var(--border-strong);background:var(--surface);color:var(--fg);cursor:pointer;transition:all .12s;font-family:inherit}
+.btn:hover{background:var(--surface-2);border-color:var(--fg-4)}
+.btn-primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+body[data-theme="dark"] .btn-primary{background:var(--fg);color:var(--ink)}
+.btn-primary:hover{opacity:.9}
+.btn-brand{background:var(--brand);color:white;border-color:var(--brand)}
+.btn-brand:hover{background:var(--brand-2);border-color:var(--brand-2)}
+.btn-ghost{border-color:transparent;background:transparent}
+.btn-ghost:hover{background:var(--surface-2)}
+.btn-danger{background:var(--red);color:white;border-color:var(--red)}
+.btn-sm{padding:3px 7px;font-size:11.5px}
+.btn svg{width:13px;height:13px}
+
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:5px;font-size:10.5px;font-weight:500;font-family:"Geist Mono"}
+.chip-green{background:rgba(31,138,76,.10);color:var(--green)}
+.chip-amber{background:rgba(176,119,0,.10);color:var(--accent-amber)}
+.chip-red{background:rgba(204,46,61,.10);color:var(--red)}
+.chip-brand{background:var(--brand-soft);color:var(--brand)}
+.chip-violet{background:rgba(111,90,214,.10);color:var(--accent-violet)}
+.chip-neutral{background:var(--surface-2);color:var(--fg-3)}
+
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dot.green{background:var(--green);box-shadow:0 0 0 3px rgba(31,138,76,.18)}
+.dot.amber{background:var(--accent-amber);box-shadow:0 0 0 3px rgba(176,119,0,.14)}
+.dot.red{background:var(--red);box-shadow:0 0 0 3px rgba(204,46,61,.14)}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow-sm)}
+.page-content{padding:24px 28px;max-width:1280px}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.page-title{font-family:var(--serif);font-size:28px;letter-spacing:-0.01em}
+.page-sub{font-size:13px;color:var(--fg-3);margin-top:2px}
+.empty{text-align:center;padding:48px;color:var(--fg-3)}
+
+/* ============ OVERVIEW ============ */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r)}
+.stat-label{font-size:10.5px;color:var(--fg-3);letter-spacing:0.04em;text-transform:uppercase;font-weight:500}
+.stat-value{font-size:24px;font-family:"Geist Mono";color:var(--fg);margin-top:2px;font-weight:500}
+.stat-sub{font-size:11px;color:var(--fg-3);font-family:"Geist Mono";margin-top:2px}
+
+/* ============ SERVICES TABLE ============ */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl thead th{text-align:left;padding:8px 12px;background:var(--surface-2);font-weight:500;color:var(--fg-3);font-size:11px;letter-spacing:0.02em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.tbl thead th:first-child{border-radius:var(--r) 0 0 0}
+.tbl thead th:last-child{border-radius:0 var(--r) 0 0}
+.tbl tbody td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--fg)}
+.tbl tbody tr{transition:background .1s}
+.tbl tbody tr:hover td{background:var(--surface-2)}
+.tbl tbody tr:last-child td{border-bottom:none}
+.svc-name{font-weight:500;display:flex;align-items:center;gap:8px}
+.svc-image{font-family:"Geist Mono";font-size:11.5px;color:var(--fg-3)}
+.svc-replicas{font-family:"Geist Mono";font-size:12px}
+.svc-time{font-family:"Geist Mono";font-size:11.5px;color:var(--fg-3)}
+
+/* ============ DEPLOYMENTS ============ */
+.deploy-card{padding:14px 16px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border)}
+.deploy-card:last-child{border-bottom:none}
+.deploy-icon{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;flex-shrink:0}
+.deploy-icon.success{background:rgba(31,138,76,.10);color:var(--green)}
+.deploy-icon.progress{background:var(--brand-soft);color:var(--brand)}
+.deploy-icon.failed{background:rgba(204,46,61,.10);color:var(--red)}
+.deploy-icon svg{width:16px;height:16px}
+.deploy-info{flex:1;min-width:0}
+.deploy-name{font-weight:500;font-size:13px;display:flex;align-items:center;gap:8px}
+.deploy-meta{font-size:12px;color:var(--fg-3);margin-top:1px;display:flex;align-items:center;gap:8px}
+.deploy-meta .mono{font-family:"Geist Mono";font-size:11px}
+.deploy-actions{display:flex;gap:4px}
+
+/* ============ CANARY PROGRESS ============ */
+.canary-bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--surface-2);width:180px}
+.canary-fill{background:var(--brand);border-radius:3px;transition:width .6s ease}
+
+/* ============ NODES ============ */
+.node-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.node-card{padding:16px;display:flex;flex-direction:column;gap:10px}
+.node-header{display:flex;align-items:center;gap:10px}
+.node-name{font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px}
+.node-role{font-size:10px;font-weight:600;color:var(--brand);background:var(--brand-soft);padding:1px 6px;border-radius:4px;letter-spacing:0.04em;text-transform:uppercase}
+.node-ip{font-family:"Geist Mono";font-size:11.5px;color:var(--fg-3)}
+.resource-bars{display:flex;flex-direction:column;gap:6px}
+.resource-row{display:flex;align-items:center;gap:8px}
+.resource-label{font-size:10.5px;color:var(--fg-3);width:36px;text-transform:uppercase;font-weight:500;letter-spacing:0.04em}
+.resource-bar{flex:1;height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+.resource-fill{height:100%;border-radius:3px;transition:width .4s}
+.resource-fill.low{background:var(--green)}
+.resource-fill.med{background:var(--accent-amber)}
+.resource-fill.high{background:var(--red)}
+.resource-pct{font-family:"Geist Mono";font-size:10.5px;color:var(--fg-3);width:32px;text-align:right}
+.node-footer{display:flex;gap:12px;font-size:11px;color:var(--fg-3);padding-top:6px;border-top:1px solid var(--border)}
+.node-footer .mono{font-family:"Geist Mono";font-size:10.5px}
+
+/* ============ SECRETS ============ */
+.secret-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);gap:12px}
+.secret-row:last-child{border-bottom:none}
+.secret-name{font-family:"Geist Mono";font-size:13px;font-weight:500;flex:1}
+.secret-meta{font-size:11px;color:var(--fg-3);font-family:"Geist Mono"}
+
+/* ============ LOGS ============ */
+.log-viewer{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+.log-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.log-body{height:380px;overflow:auto;padding:10px 14px;font-family:"Geist Mono";font-size:12px;line-height:1.7;background:var(--ink);color:#d4d8cc}
+body[data-theme="dark"] .log-body{background:#0a0d08}
+.log-line{display:flex;gap:10px}
+.log-ts{color:#6b7366;user-select:none;flex-shrink:0}
+.log-svc{flex-shrink:0;font-weight:500}
+.log-svc.s1{color:#3eb89c}
+.log-svc.s2{color:#a394e8}
+.log-svc.s3{color:#e0a847}
+.log-msg{color:#c8cfbf;word-break:break-all}
+.log-msg .err{color:#ff6b7a}
+.log-msg .warn{color:#e0a847}
+.log-msg .ok{color:#5cc680}
+
+/* ============ SERVICE DETAIL ============ */
+.detail-header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.detail-back{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--fg-3);cursor:pointer;border:none;background:none;font-family:inherit;padding:0}
+.detail-back:hover{color:var(--fg)}
+.detail-back svg{width:14px;height:14px}
+.detail-tabs{display:flex;gap:2px;background:var(--surface-2);padding:3px;border-radius:8px;margin-bottom:16px}
+.detail-tab{padding:5px 12px;font-size:12.5px;font-weight:500;color:var(--fg-3);border-radius:6px;border:none;background:transparent;cursor:pointer;font-family:inherit;transition:all .12s}
+.detail-tab:hover{color:var(--fg)}
+.detail-tab.active{background:var(--surface);color:var(--fg);box-shadow:var(--shadow-sm)}
+.container-row{display:grid;grid-template-columns:auto 1fr auto auto auto auto;gap:12px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12.5px}
+.container-row:last-child{border-bottom:none}
+.container-id{font-family:"Geist Mono";font-size:11px;color:var(--fg-3)}
+.container-node{font-size:11.5px;color:var(--fg-3)}
+
+/* ============ TOML CONFIG PREVIEW ============ */
+.toml-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+.toml-head{padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;gap:8px}
+.toml-head .fname{font-family:"Geist Mono";font-size:12px;color:var(--fg);font-weight:500}
+.toml-head .tag{font-family:"Geist Mono";font-size:10px;padding:1px 5px;background:var(--brand-soft);color:var(--brand);border-radius:3px}
+.toml-body{padding:14px;font-family:"Geist Mono";font-size:12.5px;line-height:1.7;overflow-x:auto}
+.toml-body .k{color:var(--brand);font-weight:500}
+.toml-body .s{color:var(--green)}
+.toml-body .n{color:var(--accent-amber)}
+.toml-body .c{color:var(--fg-4);font-style:italic}
+.toml-body .h{color:var(--accent-violet);font-weight:500}
+.toml-body .ln{display:block}
+
+/* ============ ANIMATIONS ============ */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .35s ease both}
+.fade-in-1{animation-delay:.05s}
+.fade-in-2{animation-delay:.10s}
+.fade-in-3{animation-delay:.15s}
+.fade-in-4{animation-delay:.20s}
+
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.5}}
+.pulse{animation:pulse-dot 2s ease-in-out infinite}
+</style>
+</head>
+<body x-data="proxa()" :data-theme="theme" x-cloak>
+
+<!-- ============ TOP NAV ============ -->
+<nav class="topnav">
+  <a class="brand" href="#">
+    <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
+      <rect x="2" y="2" width="20" height="20" rx="6" fill="var(--brand)" opacity=".15"/>
+      <path d="M7 8h4a3 3 0 0 1 0 6H7V8z" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17 8v8" stroke="var(--brand)" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="17" cy="8" r="1.5" fill="var(--brand)"/>
+    </svg>
+    <span class="wordmark">Proxa</span>
+    <span class="badge">v0.1</span>
+  </a>
+
+  <div class="cluster-status">
+    <span class="dot green pulse"></span>
+    <span>homelab · 2 nodes</span>
+  </div>
+
+  <div x-data="{open:false}" style="position:relative">
+    <button @click="open=!open" class="btn btn-sm" style="gap:6px;font-family:'Geist Mono';font-size:11.5px">
+      <i data-lucide="folder" style="width:12px;height:12px"></i>
+      <span x-text="project==='*'?'All projects':project"></span>
+      <span x-show="project!=='*'" class="chip" :class="roleFor(project)==='admin'?'chip-green':roleFor(project)==='operator'?'chip-amber':'chip-neutral'" x-text="roleFor(project)" style="margin-left:2px"></span>
+      <i data-lucide="chevron-down" style="width:11px;height:11px;color:var(--fg-4)"></i>
+    </button>
+    <div x-show="open" @click.outside="open=false" x-transition style="position:absolute;top:100%;left:0;margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-lg);min-width:220px;padding:4px;z-index:100">
+      <div x-show="canSeeAll" @click="project='*';open=false" style="padding:6px 10px;font-size:12px;border-radius:5px;cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--fg-2)" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">
+        <i data-lucide="layers" style="width:12px;height:12px;color:var(--fg-4)"></i> All projects <span class="chip chip-green" style="margin-left:auto">admin</span>
+      </div>
+      <div x-show="canSeeAll" style="height:1px;background:var(--border);margin:2px 0"></div>
+      <template x-for="p in myProjects" :key="p">
+        <div @click="project=p;open=false" style="padding:6px 10px;font-size:12px;border-radius:5px;cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--fg-2)" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--brand);flex-shrink:0"></span>
+          <span x-text="p"></span>
+          <span class="chip" :class="roleFor(p)==='admin'?'chip-green':roleFor(p)==='operator'?'chip-amber':'chip-neutral'" x-text="roleFor(p)" style="margin-left:auto"></span>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <div class="nav-right">
+    <button class="icon-btn" @click="toggleTheme()" :title="theme==='light'?'Dark mode':'Light mode'">
+      <i :data-lucide="theme==='light'?'moon':'sun'"></i>
+    </button>
+    <button class="icon-btn"><i data-lucide="bell"></i></button>
+    <button class="icon-btn"><i data-lucide="settings"></i></button>
+    <!-- User switcher (demo only) -->
+    <div x-data="{uopen:false}" style="position:relative">
+      <div @click="uopen=!uopen" :style="'width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,'+me.gradient+');color:white;display:grid;place-items:center;font-size:11px;font-weight:600;cursor:pointer'" x-text="me.initials"></div>
+      <div x-show="uopen" @click.outside="uopen=false" x-transition style="position:absolute;top:100%;right:0;margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-lg);min-width:240px;padding:6px;z-index:100">
+        <div style="padding:8px 10px;border-bottom:1px solid var(--border);margin-bottom:4px">
+          <div style="font-size:10px;font-weight:600;color:var(--fg-3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px">Signed in as</div>
+          <div style="font-weight:500;font-size:13px" x-text="me.name"></div>
+          <div style="font-size:11px;color:var(--fg-3)" x-text="me.email"></div>
+          <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">
+            <template x-for="p in me.policies" :key="p.project+p.role">
+              <span class="chip" :class="p.role==='admin'?'chip-green':p.role==='operator'?'chip-amber':'chip-neutral'">
+                <span x-text="p.role"></span><span style="opacity:.6" x-text="' · '+(p.project==='*'?'all':p.project)"></span>
+              </span>
+            </template>
+          </div>
+        </div>
+        <div style="padding:4px 10px 2px;font-size:10px;font-weight:600;color:var(--fg-4);letter-spacing:0.06em;text-transform:uppercase">Switch user (demo)</div>
+        <div @click="switchUser('jearel');uopen=false" style="padding:6px 10px;font-size:12px;border-radius:5px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--fg-2)" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">
+          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--accent-violet));color:white;display:grid;place-items:center;font-size:9px;font-weight:600;flex-shrink:0">J</div>
+          <div><div style="font-size:12px;font-weight:500">Jearel</div><div style="font-size:10px;color:var(--fg-3)">admin · all projects</div></div>
+        </div>
+        <div @click="switchUser('melissa');uopen=false" style="padding:6px 10px;font-size:12px;border-radius:5px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--fg-2)" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">
+          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--accent-rose),var(--accent-amber));color:white;display:grid;place-items:center;font-size:9px;font-weight:600;flex-shrink:0">M</div>
+          <div><div style="font-size:12px;font-weight:500">Melissa</div><div style="font-size:10px;color:var(--fg-3)">operator · socio-do | viewer · kut-do</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="shell">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="side-label">Overview</div>
+    <button class="side-item" :class="route==='overview'&&'active'" @click="go('overview')">
+      <i data-lucide="layout-dashboard"></i> Dashboard
+    </button>
+    <div class="side-sep"></div>
+    <div class="side-label">Workloads</div>
+    <button class="side-item" :class="route==='services'&&'active'" @click="go('services')">
+      <i data-lucide="layers"></i> Services <span class="count" x-text="fs.length"></span>
+    </button>
+    <button class="side-item" :class="route==='jobs'&&'active'" @click="go('jobs')">
+      <i data-lucide="timer"></i> Jobs <span class="count" x-text="fj.length"></span>
+    </button>
+    <button class="side-item" :class="route==='deployments'&&'active'" @click="go('deployments')">
+      <i data-lucide="rocket"></i> Deployments
+    </button>
+    <div class="side-sep"></div>
+    <div class="side-label">Infrastructure</div>
+    <button class="side-item" :class="route==='nodes'&&'active'" @click="go('nodes')">
+      <i data-lucide="server"></i> Nodes <span class="count">2</span>
+    </button>
+    <button class="side-item" :class="route==='ingress'&&'active'" @click="go('ingress')">
+      <i data-lucide="globe"></i> Ingress
+    </button>
+    <div class="side-sep"></div>
+    <div class="side-label">Configuration</div>
+    <button class="side-item" :class="route==='secrets'&&'active'" @click="go('secrets')">
+      <i data-lucide="lock"></i> Secrets <span class="count" x-text="fse.length"></span>
+    </button>
+    <button class="side-item" :class="route==='configs'&&'active'" @click="go('configs')">
+      <i data-lucide="file-cog"></i> Config Maps <span class="count" x-text="fc.length"></span>
+    </button>
+    <div class="side-sep"></div>
+    <div class="side-label">Observe</div>
+    <button class="side-item" :class="route==='logs'&&'active'" @click="go('logs')">
+      <i data-lucide="scroll-text"></i> Logs
+    </button>
+    <button class="side-item" :class="route==='metrics'&&'active'" @click="go('metrics')">
+      <i data-lucide="activity"></i> Metrics
+    </button>
+    <div x-show="isAdmin" class="side-sep"></div>
+    <div x-show="isAdmin" class="side-label">Access Control</div>
+    <button x-show="isAdmin" class="side-item" :class="route==='users'&&'active'" @click="go('users')">
+      <i data-lucide="users"></i> Users & Roles
+    </button>
+  </aside>
+
+  <!-- ============ MAIN CONTENT ============ -->
+  <main>
+    <!-- OVERVIEW -->
+    <div class="page-content" x-show="route==='overview'" x-transition>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Dashboard</h1>
+          <div class="page-sub">Cluster health at a glance</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn"><i data-lucide="refresh-cw"></i> Refresh</button>
+          <button x-show="canDeploy" class="btn btn-brand"><i data-lucide="plus"></i> Deploy</button>
+        </div>
+      </div>
+
+      <div class="stats-grid fade-in">
+        <div class="stat-card">
+          <div class="stat-label">Services</div>
+          <div class="stat-value" x-text="fs.length"></div>
+          <div class="stat-sub"><span style="color:var(--green)" x-text="fs.length+' healthy'"></span> · 0 degraded</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Containers</div>
+          <div class="stat-value" x-text="totalContainers"></div>
+          <div class="stat-sub">across 2 nodes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">CPU used</div>
+          <div class="stat-value">38%</div>
+          <div class="stat-sub">2.3 / 6 cores allocated</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Memory used</div>
+          <div class="stat-value">4.1 GB</div>
+          <div class="stat-sub">of 12 GB total</div>
+        </div>
+      </div>
+
+      <!-- Current project indicator -->
+      <div x-show="project!=='*'" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;padding:6px 10px;background:var(--brand-soft);border:1px solid var(--brand-tint);border-radius:var(--r);font-size:12px;color:var(--brand)">
+        <i data-lucide="filter" style="width:12px;height:12px"></i>
+        Project: <strong x-text="project" style="font-family:'Geist Mono'"></strong>
+        <span class="chip" :class="roleFor(project)==='admin'?'chip-green':roleFor(project)==='operator'?'chip-amber':'chip-neutral'" x-text="'your role: '+roleFor(project)" style="font-size:10px"></span>
+        <button x-show="canSeeAll" @click="project='*'" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--brand);font-size:11px;font-family:inherit;text-decoration:underline">Show all projects</button>
+      </div>
+      <div x-show="!canSeeAll && project!=='*'" style="display:flex;align-items:center;gap:4px;margin-bottom:12px;font-size:11px;color:var(--fg-4)">
+        <i data-lucide="info" style="width:11px;height:11px"></i>
+        <span x-show="roleFor(project)==='viewer'">Read-only access. Contact an admin to request deploy permissions.</span>
+        <span x-show="roleFor(project)==='operator'">You can deploy and manage services in this project.</span>
+      </div>
+
+      <!-- Recent services -->
+      <div class="card fade-in fade-in-1" style="margin-bottom:16px">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <span style="font-weight:600;font-size:13px">Services</span>
+          <button class="btn btn-ghost btn-sm" @click="go('services')">View all <i data-lucide="arrow-right"></i></button>
+        </div>
+        <table class="tbl">
+          <thead><tr>
+            <th>Name</th><th>Image</th><th>Replicas</th><th>Status</th><th>Last deploy</th><th></th>
+          </tr></thead>
+          <tbody>
+            <template x-for="s in fs" :key="s.project+'/'+s.name">
+              <tr>
+                <td><div class="svc-name"><span class="dot green"></span> <span x-text="fqn(s)"></span></div></td>
+                <td class="svc-image" x-text="s.image"></td>
+                <td class="svc-replicas" x-text="s.replicas"></td>
+                <td>
+                  <span class="chip chip-green">running</span>
+                  <span x-show="s.type==='stateful'" class="chip chip-violet">stateful</span>
+                </td>
+                <td class="svc-time" x-text="s.lastDeploy"></td>
+                <td><button class="btn btn-ghost btn-sm"><i data-lucide="ellipsis"></i></button></td>
+              </tr>
+            </template>
+            <tr x-show="fs.length===0"><td colspan="6" class="empty">No services in this project</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Recent deployments -->
+      <div class="card fade-in fade-in-2">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <span style="font-weight:600;font-size:13px">Recent deployments</span>
+          <button class="btn btn-ghost btn-sm" @click="go('deployments')">View all <i data-lucide="arrow-right"></i></button>
+        </div>
+        <template x-for="d in fd" :key="d.project+'/'+d.service+d.time">
+          <div class="deploy-card">
+            <div class="deploy-icon" :class="d.icon"><i :data-lucide="d.icon==='success'?'check':d.icon==='failed'?'x':'loader'"></i></div>
+            <div class="deploy-info">
+              <div class="deploy-name"><span x-text="(project==='*'?d.project+'/':'')+d.service"></span> <span class="chip" :class="chipClass(d.status)" x-text="d.status==='canary'?'canary '+d.pct+'%':d.status"></span></div>
+              <div class="deploy-meta"><span x-text="d.from+' → '+d.to"></span> · <span class="mono" x-text="d.time"></span><span x-show="d.step"> · <span x-text="d.step"></span></span></div>
+            </div>
+            <div x-show="d.status==='canary'" class="canary-bar"><div class="canary-fill" :style="'width:'+d.pct+'%'"></div></div>
+            <div class="deploy-actions">
+              <button x-show="d.status==='canary'" class="btn btn-sm"><i data-lucide="step-forward"></i> Promote</button>
+              <button x-show="d.status!=='rolled back'" class="btn btn-sm" style="color:var(--red)"><i data-lucide="undo-2"></i> Rollback</button>
+              <button x-show="d.status==='rolled back'" class="btn btn-sm"><i data-lucide="rotate-ccw"></i> Retry</button>
+            </div>
+          </div>
+        </template>
+        <div x-show="fd.length===0" class="empty" style="padding:24px">No deployments in this project</div>
+      </div>
+    </div>
+
+    <!-- SERVICES -->
+    <div class="page-content" x-show="route==='services'" x-transition>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Services</h1>
+          <div class="page-sub" x-text="project==='*'?'Long-running workloads — all projects':'Long-running workloads — '+project"></div>
+        </div>
+        <button class="btn btn-brand"><i data-lucide="plus"></i> New service</button>
+      </div>
+      <div class="card">
+        <table class="tbl">
+          <thead><tr>
+            <th>Name</th><th>Image</th><th>Replicas</th><th>Type</th><th>Status</th><th>Ingress</th><th>Last deploy</th><th></th>
+          </tr></thead>
+          <tbody>
+            <template x-for="s in fs" :key="s.project+'/'+s.name">
+              <tr>
+                <td><div class="svc-name"><span class="dot" :class="s.dotColor"></span> <span x-text="fqn(s)"></span></div></td>
+                <td class="svc-image" x-text="s.image"></td>
+                <td class="svc-replicas" x-text="s.replicas"></td>
+                <td><span class="chip" :class="s.type==='stateful'?'chip-violet':'chip-neutral'" x-text="s.type"></span></td>
+                <td><span class="chip chip-green" x-text="s.status"></span></td>
+                <td><span class="mono" style="font-size:11px;color:var(--fg-3)" x-text="s.ingress"></span></td>
+                <td class="svc-time" x-text="s.lastDeploy"></td>
+                <td><button class="btn btn-ghost btn-sm"><i data-lucide="ellipsis"></i></button></td>
+              </tr>
+            </template>
+            <tr x-show="fs.length===0"><td colspan="8" class="empty">No services in this project</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DEPLOYMENTS -->
+    <div class="page-content" x-show="route==='deployments'" x-transition>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Deployments</h1>
+          <div class="page-sub">Active and historical deploys</div>
+        </div>
+      </div>
+
+      <div style="font-size:11px;font-weight:600;color:var(--fg-3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px">Active</div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="deploy-card">
+          <div class="deploy-icon progress"><i data-lucide="loader"></i></div>
+          <div class="deploy-info">
+            <div class="deploy-name">api-socio-do <span class="chip chip-brand">canary</span></div>
+            <div class="deploy-meta">v24 → v25 · step 3 of 5 · <span class="mono">20% traffic</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:end">
+            <div class="canary-bar"><div class="canary-fill" style="width:20%"></div></div>
+            <span style="font-size:10px;color:var(--fg-4);font-family:'Geist Mono'">steps: 5 → 10 → 20 → 50 → 100</span>
+          </div>
+          <div class="deploy-actions">
+            <button class="btn btn-brand btn-sm"><i data-lucide="step-forward"></i> Promote to 50%</button>
+            <button class="btn btn-sm" style="color:var(--red)"><i data-lucide="undo-2"></i> Rollback</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:11px;font-weight:600;color:var(--fg-3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px">History</div>
+      <div class="card">
+        <div class="deploy-card">
+          <div class="deploy-icon success"><i data-lucide="check"></i></div>
+          <div class="deploy-info">
+            <div class="deploy-name">aplica-do-api <span class="chip chip-green">complete</span></div>
+            <div class="deploy-meta">v2 → v3 · zero-downtime rolling · <span class="mono">6h ago</span></div>
+          </div>
+          <div class="deploy-actions"><button class="btn btn-sm"><i data-lucide="undo-2"></i> Rollback</button></div>
+        </div>
+        <div class="deploy-card">
+          <div class="deploy-icon failed"><i data-lucide="x"></i></div>
+          <div class="deploy-info">
+            <div class="deploy-name">kut-do-web <span class="chip chip-red">auto-rollback</span></div>
+            <div class="deploy-meta">v8 → v9 · health check failed after 3 retries · <span class="mono">1d ago</span></div>
+          </div>
+          <div class="deploy-actions"><button class="btn btn-sm"><i data-lucide="rotate-ccw"></i> Retry v9</button></div>
+        </div>
+        <div class="deploy-card">
+          <div class="deploy-icon success"><i data-lucide="check"></i></div>
+          <div class="deploy-info">
+            <div class="deploy-name">postgres-primary <span class="chip chip-green">complete</span> <span class="chip chip-violet">stop-first</span></div>
+            <div class="deploy-meta">postgres:15 → postgres:16 · <span class="mono">3d ago</span> · 8s downtime</div>
+          </div>
+          <div class="deploy-actions"><button class="btn btn-sm"><i data-lucide="undo-2"></i> Rollback</button></div>
+        </div>
+        <div class="deploy-card">
+          <div class="deploy-icon success"><i data-lucide="check"></i></div>
+          <div class="deploy-info">
+            <div class="deploy-name">api-socio-do <span class="chip chip-green">complete</span></div>
+            <div class="deploy-meta">v23 → v24 · canary 5 steps · <span class="mono">2d ago</span></div>
+          </div>
+          <div class="deploy-actions"><button class="btn btn-sm"><i data-lucide="undo-2"></i> Rollback</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NODES -->
+    <div class="page-content" x-show="route==='nodes'" x-transition>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Nodes</h1>
+          <div class="page-sub">Cluster members</div>
+        </div>
+        <button class="btn"><i data-lucide="plus"></i> Join node</button>
+      </div>
+      <div class="node-grid">
+        <div class="card node-card fade-in">
+          <div class="node-header">
+            <div>
+              <div class="node-name"><span class="dot green"></span> pve-node-01 <span class="node-role">leader</span></div>
+              <div class="node-ip">100.64.0.1 · Santo Domingo</div>
+            </div>
+          </div>
+          <div class="resource-bars">
+            <div class="resource-row">
+              <span class="resource-label">CPU</span>
+              <div class="resource-bar"><div class="resource-fill low" style="width:42%"></div></div>
+              <span class="resource-pct">42%</span>
+            </div>
+            <div class="resource-row">
+              <span class="resource-label">MEM</span>
+              <div class="resource-bar"><div class="resource-fill low" style="width:58%"></div></div>
+              <span class="resource-pct">58%</span>
+            </div>
+            <div class="resource-row">
+              <span class="resource-label">DISK</span>
+              <div class="resource-bar"><div class="resource-fill low" style="width:31%"></div></div>
+              <span class="resource-pct">31%</span>
+            </div>
+          </div>
+          <div class="node-footer">
+            <span>Containers: <span class="mono">9</span></span>
+            <span>Agent: <span class="mono">v0.1.0</span></span>
+            <span>Last heartbeat: <span class="mono">2s ago</span></span>
+          </div>
+        </div>
+        <div class="card node-card fade-in fade-in-1">
+          <div class="node-header">
+            <div>
+              <div class="node-name"><span class="dot green"></span> pve-node-02 <span class="node-role">agent</span></div>
+              <div class="node-ip">100.64.0.2 · Santo Domingo</div>
+            </div>
+          </div>
+          <div class="resource-bars">
+            <div class="resource-row">
+              <span class="resource-label">CPU</span>
+              <div class="resource-bar"><div class="resource-fill low" style="width:28%"></div></div>
+              <span class="resource-pct">28%</span>
+            </div>
+            <div class="resource-row">
+              <span class="resource-label">MEM</span>
+              <div class="resource-bar"><div class="resource-fill low" style="width:34%"></div></div>
+              <span class="resource-pct">34%</span>
+            </div>
+            <div class="resource-row">
+              <span class="resource-label">DISK</span>
+              <div class="resource-bar"><div class="resource-fill low" style="width:22%"></div></div>
+              <span class="resource-pct">22%</span>
+            </div>
+          </div>
+          <div class="node-footer">
+            <span>Containers: <span class="mono">5</span></span>
+            <span>Agent: <span class="mono">v0.1.0</span></span>
+            <span>Last heartbeat: <span class="mono">1s ago</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECRETS -->
+    <div class="page-content" x-show="route==='secrets'" x-transition>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Secrets</h1>
+          <div class="page-sub">Encrypted with age · values never displayed</div>
+        </div>
+        <button class="btn btn-brand"><i data-lucide="plus"></i> Add secret</button>
+      </div>
+      <div class="card">
+        <div class="secret-row">
+          <i data-lucide="lock" style="width:14px;height:14px;color:var(--fg-4)"></i>
+          <span class="secret-name">db/primary</span>
+          <span class="chip chip-neutral">2 services</span>
+          <span class="secret-meta">rotated 3d ago</span>
+          <button class="btn btn-sm"><i data-lucide="refresh-cw"></i> Rotate</button>
+          <button class="btn btn-sm" style="color:var(--red)"><i data-lucide="trash-2"></i></button>
+        </div>
+        <div class="secret-row">
+          <i data-lucide="lock" style="width:14px;height:14px;color:var(--fg-4)"></i>
+          <span class="secret-name">db/redis</span>
+          <span class="chip chip-neutral">1 service</span>
+          <span class="secret-meta">rotated 5d ago</span>
+          <button class="btn btn-sm"><i data-lucide="refresh-cw"></i> Rotate</button>
+          <button class="btn btn-sm" style="color:var(--red)"><i data-lucide="trash-2"></i></button>
+        </div>
+        <div class="secret-row">
+          <i data-lucide="lock" style="width:14px;height:14px;color:var(--fg-4)"></i>
+          <span class="secret-name">api/jwt-secret</span>
+          <span class="chip chip-neutral">1 service</span>
+          <span class="secret-meta">created 14d ago</span>
+          <button class="btn btn-sm"><i data-lucide="refresh-cw"></i> Rotate</button>
+          <button class="btn btn-sm" style="color:var(--red)"><i data-lucide="trash-2"></i></button>
+        </div>
+        <div class="secret-row">
+          <i data-lucide="lock" style="width:14px;height:14px;color:var(--fg-4)"></i>
+          <span class="secret-name">tls/internal-ca</span>
+          <span class="chip chip-neutral">system</span>
+          <span class="secret-meta">auto-generated</span>
+          <button class="btn btn-sm" disabled style="opacity:.4"><i data-lucide="refresh-cw"></i> Rotate</button>
+          <button class="btn btn-sm" disabled style="opacity:.4"><i data-lucide="trash-2"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOGS -->
+    <div class="page-content" x-show="route==='logs'" x-transition>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Logs</h1>
+          <div class="page-sub">Live stream from all services</div>
+        </div>
+      </div>
+      <div class="log-viewer">
+        <div class="log-toolbar">
+          <span style="font-size:12px;font-weight:500">All services</span>
+          <div style="margin-left:auto;display:flex;gap:6px">
+            <button class="btn btn-sm"><i data-lucide="filter"></i> Filter</button>
+            <button class="btn btn-sm"><i data-lucide="pause"></i> Pause</button>
+            <button class="btn btn-sm"><i data-lucide="download"></i> Export</button>
+          </div>
+        </div>
+        <div class="log-body">
+          <div class="log-line"><span class="log-ts">14:23:01</span><span class="log-svc s1">api-socio-do</span><span class="log-msg">GET /api/v1/contributors?q=juan 200 <span class="ok">12ms</span></span></div>
+          <div class="log-line"><span class="log-ts">14:23:01</span><span class="log-svc s2">postgres</span><span class="log-msg">LOG: checkpoint starting: time</span></div>
+          <div class="log-line"><span class="log-ts">14:23:02</span><span class="log-svc s1">api-socio-do</span><span class="log-msg">GET /api/v1/company/130985842 200 <span class="ok">8ms</span></span></div>
+          <div class="log-line"><span class="log-ts">14:23:02</span><span class="log-svc s3">kut-do-web</span><span class="log-msg">POST /api/shorten 201 — slug=abc123</span></div>
+          <div class="log-line"><span class="log-ts">14:23:03</span><span class="log-svc s1">api-socio-do</span><span class="log-msg">GET /healthz 200 <span class="ok">1ms</span></span></div>
+          <div class="log-line"><span class="log-ts">14:23:04</span><span class="log-svc s2">postgres</span><span class="log-msg">LOG: checkpoint complete: wrote 42 buffers (0.3%)</span></div>
+          <div class="log-line"><span class="log-ts">14:23:05</span><span class="log-svc s1">api-socio-do</span><span class="log-msg"><span class="warn">WARN</span> rate limit approaching for tier=free client=189.112.x.x</span></div>
+          <div class="log-line"><span class="log-ts">14:23:06</span><span class="log-svc s3">kut-do-web</span><span class="log-msg">GET /abc123 302 → https://socio.do/about</span></div>
+          <div class="log-line"><span class="log-ts">14:23:07</span><span class="log-svc s1">api-socio-do</span><span class="log-msg">GET /api/v1/search?q=farmacia+popular 200 <span class="ok">34ms</span></span></div>
+          <div class="log-line"><span class="log-ts">14:23:08</span><span class="log-svc s1">api-socio-do</span><span class="log-msg">POST /api/v1/webhook/dgii 200 — processed 12 records</span></div>
+          <div class="log-line"><span class="log-ts">14:23:09</span><span class="log-svc s2">postgres</span><span class="log-msg">LOG: automatic vacuum of table "socio.contributors"</span></div>
+          <div class="log-line"><span class="log-ts">14:23:10</span><span class="log-svc s3">kut-do-web</span><span class="log-msg">GET /healthz 200 <span class="ok">1ms</span></span></div>
+          <div class="log-line"><span class="log-ts">14:23:11</span><span class="log-svc s1">api-socio-do</span><span class="log-msg">GET /api/v1/contributors?q=rodriguez 200 <span class="ok">18ms</span></span></div>
+          <div class="log-line"><span class="log-ts">14:23:12</span><span class="log-svc s1">api-socio-do</span><span class="log-msg"><span class="err">ERROR</span> connection refused to redis-cache:6379 — retry 1/3</span></div>
+          <div class="log-line"><span class="log-ts">14:23:12</span><span class="log-svc s1">api-socio-do</span><span class="log-msg"><span class="ok">OK</span> redis reconnected after 230ms</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INGRESS -->
+    <div class="page-content" x-show="route==='ingress'" x-transition>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Ingress</h1>
+          <div class="page-sub">HTTP (L7) and TCP/UDP (L4) routes</div>
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--fg-3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px">HTTP routes (CertMagic TLS)</div>
+      <div class="card" style="margin-bottom:20px">
+        <table class="tbl">
+          <thead><tr><th>Domain</th><th>Path</th><th>Service</th><th>TLS</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="mono" style="font-size:12px">api.socio.do</td>
+              <td class="mono" style="font-size:12px;color:var(--fg-3)">/</td>
+              <td>api-socio-do:8080</td>
+              <td><span class="chip chip-green">auto</span></td>
+              <td><span class="dot green"></span></td>
+            </tr>
+            <tr>
+              <td class="mono" style="font-size:12px">kut.do</td>
+              <td class="mono" style="font-size:12px;color:var(--fg-3)">/</td>
+              <td>kut-do-web:3000</td>
+              <td><span class="chip chip-green">auto</span></td>
+              <td><span class="dot green"></span></td>
+            </tr>
+            <tr>
+              <td class="mono" style="font-size:12px">aplica.do</td>
+              <td class="mono" style="font-size:12px;color:var(--fg-3)">/</td>
+              <td>aplica-do-api:8080</td>
+              <td><span class="chip chip-green">auto</span></td>
+              <td><span class="dot green"></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--fg-3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px">TCP/UDP routes (L4 proxy)</div>
+      <div class="card">
+        <table class="tbl">
+          <thead><tr><th>Protocol</th><th>Host port</th><th>Service</th><th>TLS mode</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="chip chip-neutral">TCP</span></td>
+              <td class="mono" style="font-size:12px">:5432</td>
+              <td>postgres-primary:5432</td>
+              <td><span class="chip chip-violet">passthrough</span></td>
+              <td><span class="dot green"></span></td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-neutral">TCP</span></td>
+              <td class="mono" style="font-size:12px">:6379</td>
+              <td>redis-cache:6379</td>
+              <td><span class="chip chip-neutral">none</span></td>
+              <td><span class="dot green"></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CONFIG MAPS -->
+    <div class="page-content" x-show="route==='configs'" x-transition>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Config Maps</h1>
+          <div class="page-sub">Key-value and file-mount configs</div>
+        </div>
+        <button class="btn btn-brand"><i data-lucide="plus"></i> New config</button>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+          <i data-lucide="file-cog" style="width:14px;height:14px;color:var(--fg-3)"></i>
+          <span style="font-weight:500;font-size:13px">api-env</span>
+          <span class="chip chip-neutral">3 keys</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--fg-4);font-family:'Geist Mono'">v2 · updated 12m ago</span>
+        </div>
+        <div style="padding:10px 16px;font-family:'Geist Mono';font-size:12px;display:flex;flex-direction:column;gap:4px">
+          <div><span style="color:var(--brand)">LOG_LEVEL</span> <span style="color:var(--fg-4)">=</span> <span style="color:var(--green)">info</span></div>
+          <div><span style="color:var(--brand)">RATE_LIMIT</span> <span style="color:var(--fg-4)">=</span> <span style="color:var(--accent-amber)">100</span></div>
+          <div><span style="color:var(--brand)">CACHE_TTL</span> <span style="color:var(--fg-4)">=</span> <span style="color:var(--accent-amber)">3600</span></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+          <i data-lucide="file-cog" style="width:14px;height:14px;color:var(--fg-3)"></i>
+          <span style="font-weight:500;font-size:13px">kut-env</span>
+          <span class="chip chip-neutral">2 keys</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--fg-4);font-family:'Geist Mono'">v1 · updated 1d ago</span>
+        </div>
+        <div style="padding:10px 16px;font-family:'Geist Mono';font-size:12px;display:flex;flex-direction:column;gap:4px">
+          <div><span style="color:var(--brand)">BASE_URL</span> <span style="color:var(--fg-4)">=</span> <span style="color:var(--green)">https://kut.do</span></div>
+          <div><span style="color:var(--brand)">ANALYTICS</span> <span style="color:var(--fg-4)">=</span> <span style="color:var(--green)">true</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JOBS -->
+    <div class="page-content" x-show="route==='jobs'" x-transition>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Jobs</h1>
+          <div class="page-sub">One-shot and scheduled tasks</div>
+        </div>
+        <button class="btn btn-brand"><i data-lucide="plus"></i> New job</button>
+      </div>
+      <div class="card">
+        <table class="tbl">
+          <thead><tr><th>Name</th><th>Image</th><th>Schedule</th><th>Last run</th><th>Status</th><th>Duration</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="svc-name"><i data-lucide="timer" style="width:14px;height:14px;color:var(--fg-3)"></i> db-backup</div></td>
+              <td class="svc-image">postgres:16</td>
+              <td class="mono" style="font-size:11px;color:var(--fg-3)">0 3 * * *</td>
+              <td class="svc-time">today 03:00</td>
+              <td><span class="chip chip-green">success</span></td>
+              <td class="mono" style="font-size:11px;color:var(--fg-3)">47s</td>
+            </tr>
+            <tr>
+              <td><div class="svc-name"><i data-lucide="timer" style="width:14px;height:14px;color:var(--fg-3)"></i> analytics-rollup</div></td>
+              <td class="svc-image">ghcr.io/socio/kut:v8</td>
+              <td class="mono" style="font-size:11px;color:var(--fg-3)">*/15 * * * *</td>
+              <td class="svc-time">7m ago</td>
+              <td><span class="chip chip-green">success</span></td>
+              <td class="mono" style="font-size:11px;color:var(--fg-3)">3s</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- METRICS (placeholder) -->
+    <div class="page-content" x-show="route==='metrics'" x-transition>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Metrics</h1>
+          <div class="page-sub">Prometheus /metrics · connect to Grafana for visualization</div>
+        </div>
+      </div>
+      <div class="card" style="padding:48px;text-align:center;color:var(--fg-3)">
+        <i data-lucide="activity" style="width:32px;height:32px;color:var(--fg-4);margin-bottom:12px"></i>
+        <div style="font-size:14px;margin-bottom:4px">Metrics endpoint active</div>
+        <div style="font-family:'Geist Mono';font-size:12px;color:var(--fg-4)">http://localhost:9090/metrics</div>
+        <div style="margin-top:12px;font-size:12.5px">Connect Prometheus + Grafana for dashboards. Built-in charts coming in v0.5.</div>
+      </div>
+    </div>
+
+    <!-- USERS & ROLES -->
+    <div class="page-content" x-show="route==='users'" x-transition>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Users & Roles</h1>
+          <div class="page-sub">Authentication providers and role assignments</div>
+        </div>
+        <button class="btn btn-brand"><i data-lucide="plus"></i> Add user</button>
+      </div>
+
+      <!-- Auth providers status -->
+      <div style="font-size:11px;font-weight:600;color:var(--fg-3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px">Authentication Providers</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
+        <div class="card" style="padding:12px 14px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <span class="dot green"></span>
+            <span style="font-weight:500;font-size:12.5px">Token</span>
+          </div>
+          <div style="font-size:11px;color:var(--fg-3)">Always active · 3 tokens</div>
+        </div>
+        <div class="card" style="padding:12px 14px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <span class="dot green"></span>
+            <span style="font-weight:500;font-size:12.5px">Local</span>
+          </div>
+          <div style="font-size:11px;color:var(--fg-3)">Active · 2 users</div>
+        </div>
+        <div class="card" style="padding:12px 14px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <span class="dot amber"></span>
+            <span style="font-weight:500;font-size:12.5px">OIDC</span>
+          </div>
+          <div style="font-size:11px;color:var(--fg-3)">Configured · Zitadel</div>
+        </div>
+        <div class="card" style="padding:12px 14px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <span style="width:7px;height:7px;border-radius:50%;background:var(--fg-4);display:inline-block"></span>
+            <span style="font-weight:500;font-size:12.5px">LDAP</span>
+          </div>
+          <div style="font-size:11px;color:var(--fg-4)">Not configured</div>
+        </div>
+      </div>
+
+      <!-- Users table -->
+      <div style="font-size:11px;font-weight:600;color:var(--fg-3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px">Users & Policies</div>
+      <div class="card">
+        <table class="tbl">
+          <thead><tr>
+            <th>User</th><th>Provider</th><th>Role</th><th>Project Scope</th><th>Last active</th><th></th>
+          </tr></thead>
+          <tbody>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--accent-violet));color:white;display:grid;place-items:center;font-size:10px;font-weight:600">J</div>
+                  <div>
+                    <div style="font-weight:500;font-size:13px">jearel</div>
+                    <div style="font-size:11px;color:var(--fg-3)">jearel@socio.do</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="chip chip-brand">local</span></td>
+              <td><span class="chip chip-green">admin</span></td>
+              <td><span class="mono" style="font-size:11px">*</span> <span style="font-size:10px;color:var(--fg-4)">(all projects)</span></td>
+              <td class="svc-time">2m ago</td>
+              <td><button class="btn btn-ghost btn-sm"><i data-lucide="ellipsis"></i></button></td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--accent-rose),var(--accent-amber));color:white;display:grid;place-items:center;font-size:10px;font-weight:600">M</div>
+                  <div>
+                    <div style="font-weight:500;font-size:13px">melissa</div>
+                    <div style="font-size:11px;color:var(--fg-3)">melissa@socio.do</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="chip chip-violet">oidc</span></td>
+              <td><span class="chip chip-amber">operator</span></td>
+              <td><span class="mono" style="font-size:11px">socio-do</span></td>
+              <td class="svc-time">1h ago</td>
+              <td><button class="btn btn-ghost btn-sm"><i data-lucide="ellipsis"></i></button></td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--accent-rose),var(--accent-amber));color:white;display:grid;place-items:center;font-size:10px;font-weight:600">M</div>
+                  <div>
+                    <div style="font-weight:500;font-size:13px">melissa</div>
+                    <div style="font-size:11px;color:var(--fg-3)">melissa@socio.do</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="chip chip-violet">oidc</span></td>
+              <td><span class="chip chip-neutral">viewer</span></td>
+              <td><span class="mono" style="font-size:11px">kut-do</span></td>
+              <td class="svc-time">1h ago</td>
+              <td><button class="btn btn-ghost btn-sm"><i data-lucide="ellipsis"></i></button></td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <i data-lucide="bot" style="width:18px;height:18px;color:var(--fg-3);margin:3px"></i>
+                  <div>
+                    <div style="font-weight:500;font-size:13px">ci-deploy</div>
+                    <div style="font-size:11px;color:var(--fg-3)">API token · CircleCI</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="chip chip-neutral">token</span></td>
+              <td><span class="chip chip-amber">operator</span></td>
+              <td><span class="mono" style="font-size:11px">socio-do</span></td>
+              <td class="svc-time">12m ago</td>
+              <td><button class="btn btn-ghost btn-sm"><i data-lucide="ellipsis"></i></button></td>
+            </tr>
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <i data-lucide="server" style="width:18px;height:18px;color:var(--fg-3);margin:3px"></i>
+                  <div>
+                    <div style="font-weight:500;font-size:13px">pve-node-02</div>
+                    <div style="font-size:11px;color:var(--fg-3)">Agent certificate · mTLS</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="chip chip-neutral">agent</span></td>
+              <td><span class="chip chip-brand">agent</span></td>
+              <td><span class="mono" style="font-size:11px">*</span> <span style="font-size:10px;color:var(--fg-4)">(system)</span></td>
+              <td class="svc-time">1s ago</td>
+              <td><button class="btn btn-ghost btn-sm"><i data-lucide="ellipsis"></i></button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+function proxa(){return{
+  route:'overview',
+  project:'*',
+  theme:'light',
+  currentUser:'jearel',
+  users:{
+    jearel:{name:'Jearel',email:'jearel@socio.do',initials:'J',provider:'local',policies:[{role:'admin',project:'*'}],gradient:'var(--brand),var(--accent-violet)'},
+    melissa:{name:'Melissa',email:'melissa@socio.do',initials:'M',provider:'oidc',policies:[{role:'operator',project:'socio-do'},{role:'viewer',project:'kut-do'}],gradient:'var(--accent-rose),var(--accent-amber)'},
+  },
+  get me(){return this.users[this.currentUser]},
+  get isAdmin(){return this.me.policies.some(p=>p.role==='admin'&&p.project==='*')},
+  get myProjects(){
+    if(this.isAdmin) return ['socio-do','kut-do','aplica-do'];
+    return [...new Set(this.me.policies.map(p=>p.project))];
+  },
+  get canSeeAll(){return this.isAdmin},
+  roleFor(proj){
+    const p=this.me.policies.find(x=>x.project===proj||(x.project==='*'));
+    return p?p.role:null;
+  },
+  get canDeploy(){
+    if(this.project==='*') return this.isAdmin;
+    const r=this.roleFor(this.project);
+    return r==='admin'||r==='operator';
+  },
+  services:[
+    {name:'api',project:'socio-do',image:'ghcr.io/socio/api:v24',replicas:'3/3',status:'running',type:'stateless',ingress:'api.socio.do:443',ingressType:'http',lastDeploy:'12m ago',dotColor:'green'},
+    {name:'postgres-primary',project:'socio-do',image:'postgres:16',replicas:'1/1',status:'running',type:'stateful',ingress:'tcp:5432',ingressType:'tcp',lastDeploy:'3d ago',dotColor:'green'},
+    {name:'web',project:'kut-do',image:'ghcr.io/socio/kut:v8',replicas:'2/2',status:'running',type:'stateless',ingress:'kut.do:443',ingressType:'http',lastDeploy:'1d ago',dotColor:'green'},
+    {name:'redis-cache',project:'socio-do',image:'redis:7-alpine',replicas:'1/1',status:'running',type:'stateful',ingress:'tcp:6379',ingressType:'tcp',lastDeploy:'5d ago',dotColor:'green'},
+    {name:'api',project:'aplica-do',image:'ghcr.io/socio/aplica:v3',replicas:'2/2',status:'running',type:'stateless',ingress:'aplica.do:443',ingressType:'http',lastDeploy:'6h ago',dotColor:'green'},
+  ],
+  deployments:[
+    {service:'api',project:'socio-do',from:'v24',to:'v25',status:'canary',pct:20,steps:'5 \u2192 10 \u2192 20 \u2192 50 \u2192 100',step:'3/5',time:'12m ago',icon:'progress'},
+    {service:'api',project:'aplica-do',from:'v2',to:'v3',status:'complete',pct:100,steps:'',step:'',time:'6h ago',icon:'success'},
+    {service:'web',project:'kut-do',from:'v8',to:'v9',status:'rolled back',pct:0,steps:'',step:'health check failed',time:'1d ago',icon:'failed'},
+    {service:'postgres-primary',project:'socio-do',from:'postgres:15',to:'postgres:16',status:'complete',pct:100,steps:'',step:'stop-first \u00b7 8s downtime',time:'3d ago',icon:'success'},
+  ],
+  secrets:[
+    {name:'db/primary',project:'socio-do',users:2,rotated:'3d ago'},
+    {name:'db/redis',project:'socio-do',users:1,rotated:'5d ago'},
+    {name:'jwt-secret',project:'socio-do',users:1,rotated:'14d ago'},
+    {name:'api-key',project:'aplica-do',users:1,rotated:'7d ago'},
+    {name:'tls/internal-ca',project:'*',users:0,rotated:'auto-generated',system:true},
+  ],
+  jobs:[
+    {name:'db-backup',project:'socio-do',image:'postgres:16',schedule:'0 3 * * *',lastRun:'today 03:00',status:'success',duration:'47s'},
+    {name:'analytics-rollup',project:'kut-do',image:'ghcr.io/socio/kut:v8',schedule:'*/15 * * * *',lastRun:'7m ago',status:'success',duration:'3s'},
+  ],
+  configs:[
+    {name:'api-env',project:'socio-do',keys:3,version:'v2',updated:'12m ago',entries:[{k:'LOG_LEVEL',v:'info',t:'s'},{k:'RATE_LIMIT',v:'100',t:'n'},{k:'CACHE_TTL',v:'3600',t:'n'}]},
+    {name:'kut-env',project:'kut-do',keys:2,version:'v1',updated:'1d ago',entries:[{k:'BASE_URL',v:'https://kut.do',t:'s'},{k:'ANALYTICS',v:'true',t:'s'}]},
+    {name:'aplica-env',project:'aplica-do',keys:1,version:'v1',updated:'6h ago',entries:[{k:'BASE_URL',v:'https://aplica.do',t:'s'}]},
+  ],
+  _filterByProject(arr){
+    const accessible=this.myProjects;
+    const projFiltered=this.project==='*'?arr.filter(x=>accessible.includes(x.project)||x.project==='*'):arr.filter(x=>x.project===this.project);
+    return projFiltered;
+  },
+  get fs(){return this._filterByProject(this.services)},
+  get fd(){return this._filterByProject(this.deployments)},
+  get fse(){return this._filterByProject(this.secrets)},
+  get fj(){return this._filterByProject(this.jobs)},
+  get fc(){return this._filterByProject(this.configs)},
+  get totalContainers(){return this.fs.reduce((a,s)=>{const p=s.replicas.split('/');return a+parseInt(p[0])},0)},
+  fqn(s){return this.project==='*'?(s.project+'/'+s.name):s.name},
+  chipClass(s){return s==='running'?'chip-green':s==='canary'?'chip-brand':s==='complete'?'chip-green':s==='rolled back'||s==='failed'?'chip-red':'chip-amber'},
+  switchUser(u){
+    this.currentUser=u;
+    if(!this.canSeeAll && this.project==='*'){this.project=this.myProjects[0]||'*'}
+    else if(this.project!=='*'&&!this.myProjects.includes(this.project)){this.project=this.myProjects[0]||'*'}
+    this.$nextTick(()=>{if(window.lucide) lucide.createIcons()});
+  },
+  init(){if(window.lucide) lucide.createIcons()},
+  go(r){this.route=r;this.$nextTick(()=>{if(window.lucide) lucide.createIcons()})},
+  toggleTheme(){this.theme=this.theme==='light'?'dark':'light';document.body.dataset.theme=this.theme;this.$nextTick(()=>{if(window.lucide) lucide.createIcons()})},
+}}
+</script>
+</body>
+</html>

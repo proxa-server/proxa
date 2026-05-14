@@ -5,12 +5,12 @@ Proxa is a self-hosted container orchestrator built as a single Go binary. Apach
 ## Source of truth (read these before doing work)
 
 1. **Constitution** — `.specify/memory/constitution.md`. Non-negotiable principles. Every plan, task, and implementation must comply.
-2. **Feature specs** — `.specify/specs/<NNN-feature-name>/spec.md`. Each feature has its own folder. Current features: `000-foundation`, `001-core-loop`.
+2. **Feature specs** — `specs/<NNN-feature-name>/spec.md`. Each feature has its own folder. Current features: `000-foundation`, `001-core-loop`. (The speckit toolchain hardcodes this location; do not move specs back under `.specify/specs/`.)
 3. **Technical spec** — the original `proxa-spec.docx` (not in repo) defines the 18-section design. The feature specs are derived from it.
 
 ## Tech stack (do not deviate without updating the constitution)
 
-- Go 1.22+, `CGO_ENABLED=0`, single static binary
+- Go 1.26.x, `CGO_ENABLED=0`, single static binary
 - chi HTTP router, cobra+viper CLI
 - modernc.org/sqlite (single-node), etcd embedded (multi-node v1.0)
 - Docker API via `docker/docker/client` (behind `Runtime` interface)
