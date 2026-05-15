@@ -22,6 +22,7 @@ type dockerClient interface {
 	containerClient
 	imageClient
 	systemClient
+	execClient
 	closer
 }
 
