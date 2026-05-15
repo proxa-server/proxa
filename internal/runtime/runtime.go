@@ -80,12 +80,13 @@ type ImageInfo struct {
 
 // ContainerInfo describes a container known to the runtime.
 type ContainerInfo struct {
-	ID     string
-	Name   string
-	Image  string
-	State  string // created | running | exited | paused | ...
-	Health string // healthy | unhealthy | starting | none
-	Labels map[string]string
+	ID        string
+	Name      string
+	Image     string
+	State     string // created | running | exited | paused | ...
+	Health    string // healthy | unhealthy | starting | none
+	IPAddress string // bridge-network IPv4 if connected; empty otherwise (populated by InspectContainer)
+	Labels    map[string]string
 }
 
 // ListFilter scopes a ListContainers call. Project is required.

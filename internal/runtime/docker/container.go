@@ -91,6 +91,20 @@ func (r *Runtime) InspectContainer(ctx context.Context, id string) (*runtime.Con
 	if resp.State.Health != nil {
 		info.Health = resp.State.Health.Status
 	}
+	// Resolve the container's bridge-network IPv4 for HTTP probes (R-001).
+	// Prefer the "bridge" network; fall back to the first non-empty IP.
+	if resp.NetworkSettings != nil {
+		if ep, ok := resp.NetworkSettings.Networks["bridge"]; ok && ep != nil && ep.IPAddress != "" {
+			info.IPAddress = ep.IPAddress
+		} else {
+			for _, ep := range resp.NetworkSettings.Networks {
+				if ep != nil && ep.IPAddress != "" {
+					info.IPAddress = ep.IPAddress
+					break
+				}
+			}
+		}
+	}
 	return info, nil
 }
 
