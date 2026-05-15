@@ -3,28 +3,35 @@ package reconciler
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
+	"github.com/proxa-server/proxa/internal/probe"
 	rt "github.com/proxa-server/proxa/internal/runtime"
 	dockerlabels "github.com/proxa-server/proxa/internal/runtime/docker"
 )
 
-// Apply executes one Action against the given Runtime. Errors are
-// wrapped with the action context so loop logging is informative.
-//
-// Strategy: naive remove-then-create per replica (Complexity Tracking
-// deviation #2). Real start-first/stop-first arrives in Feature 002.
-func Apply(ctx context.Context, runtime rt.Runtime, a Action) error {
+// Apply executes one Action. Create/Remove go straight to the Runtime;
+// Replace routes through the spec-selected Strategy (start-first for
+// stateless, stop-first for stateful) so the rollover is probe-gated.
+// Errors are wrapped with action context for informative loop logging.
+func Apply(ctx context.Context, runtime rt.Runtime, probes *probe.Manager, logger *slog.Logger, a Action) error {
 	switch a.Type {
 	case ActionCreate:
 		return applyCreate(ctx, runtime, a)
 	case ActionRemove:
 		return runtime.RemoveContainer(ctx, a.ContainerID, true)
 	case ActionReplace:
-		// Naive: remove the stale, then create the fresh.
-		if err := runtime.RemoveContainer(ctx, a.ContainerID, true); err != nil {
-			return fmt.Errorf("reconciler: replace[remove %s]: %w", a.ContainerID, err)
-		}
-		return applyCreate(ctx, runtime, a)
+		strategy := SelectStrategy(a.Spec)
+		return strategy.Apply(ctx, Request{
+			Project:    a.Project,
+			Service:    a.Service,
+			ReplicaIdx: a.Replica,
+			OldID:      a.ContainerID,
+			NewSpec:    a.Spec,
+			Runtime:    runtime,
+			Probes:     probes,
+			Logger:     logger,
+		})
 	default:
 		return fmt.Errorf("reconciler: unknown action type %q", a.Type)
 	}

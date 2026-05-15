@@ -120,7 +120,7 @@ func (r *Reconciler) reconcileProject(ctx context.Context, project string) {
 	if len(actions) > 0 {
 		r.logger.Info("reconciling", "project", project, "actions", len(actions))
 		for _, a := range actions {
-			if err := Apply(ctx, r.runtime, a); err != nil {
+			if err := Apply(ctx, r.runtime, r.probes, r.logger, a); err != nil {
 				r.logger.Error("action failed", "type", a.Type, "project", a.Project,
 					"service", a.Service, "replica", a.Replica, "reason", a.Reason, "err", err)
 				continue
