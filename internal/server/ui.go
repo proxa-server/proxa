@@ -41,6 +41,20 @@ func (s *Server) MountUI() {
 }
 
 func (s *Server) handleUIIndex(w http.ResponseWriter, r *http.Request) {
+	// If the user landed via /ui/?token=... promote that into a cookie
+	// so subsequent HTMX polls include it automatically. Then redirect
+	// to a clean URL so the token doesn't linger in the URL bar.
+	if tok := r.URL.Query().Get("token"); tok != "" {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "proxa_token",
+			Value:    tok,
+			Path:     "/",
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
+		})
+		http.Redirect(w, r, "/ui/", http.StatusSeeOther)
+		return
+	}
 	data := s.buildUIData(r)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := web.Templates.ExecuteTemplate(w, "index.html", data); err != nil {

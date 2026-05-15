@@ -71,20 +71,24 @@ func (a *Authenticator) RotateCredentials(ctx context.Context, subjectID string)
 	return auth.ErrNotSupported
 }
 
-// bearerToken parses an "Authorization: Bearer <token>" header. The
-// token (the part after "Bearer ") is returned as the second result;
-// false means the header was missing or malformed.
+// bearerToken parses an "Authorization: Bearer <token>" header.
+// Falls back to the proxa_token cookie (set by the UI middleware
+// when the user lands at /ui/?token=...) and finally to the
+// ?token= query parameter (browser-friendly first-visit URL).
+// Returns the token and true on success.
 func bearerToken(r *http.Request) (string, bool) {
-	h := r.Header.Get("Authorization")
-	const prefix = "Bearer "
-	if !strings.HasPrefix(h, prefix) {
-		return "", false
+	if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") {
+		if tok := strings.TrimSpace(h[len("Bearer "):]); tok != "" {
+			return tok, true
+		}
 	}
-	tok := strings.TrimSpace(h[len(prefix):])
-	if tok == "" {
-		return "", false
+	if c, err := r.Cookie("proxa_token"); err == nil && c.Value != "" {
+		return c.Value, true
 	}
-	return tok, true
+	if tok := r.URL.Query().Get("token"); tok != "" {
+		return tok, true
+	}
+	return "", false
 }
 
 // stripSecret returns a copy of m with the "secret_hash" key removed.
