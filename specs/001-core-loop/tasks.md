@@ -323,7 +323,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T065 Re-run the license audit script from T003 against the post-tidy `go.sum`. Update `docs/licenses.md`. Flag any AGPL/SSPL/BSL transitive (constitution §IX). If any surface, file a follow-up task to either replace the dep or add an exemption to the constitution (the latter requires explicit Architect approval). Commit: `docs(licenses): refresh transitive license audit`.
 
-- [ ] T066 Walk `quickstart.md` end-to-end on a clean `${PROXA_DATA_DIR}` (use `/tmp/proxa-validate-001`). Record outcomes in `specs/001-core-loop/validation.md` mirroring the format used by 000-foundation: SC-by-SC table with PASS/FAIL/READY status and evidence. Commit: `docs(spec): record quickstart validation results in specs/001-core-loop/`.
+- [X] T066 Walk `quickstart.md` end-to-end on a clean `${PROXA_DATA_DIR}` (use `/tmp/proxa-validate-001`). Record outcomes in `specs/001-core-loop/validation.md` mirroring the format used by 000-foundation: SC-by-SC table with PASS/FAIL/READY status and evidence. Commit: `docs(spec): record quickstart validation results in specs/001-core-loop/`.
 
 **Checkpoint (end of feature)**: All seven spec success criteria met. `git log --oneline 001-core-loop ^main` shows one commit per task, every one constitution-§XI compliant.
 
