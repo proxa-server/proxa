@@ -103,7 +103,7 @@ func (s *Server) buildUIData(r *http.Request) uiData {
 				Image:           svc.Spec.Image,
 				DesiredReplicas: svc.Spec.Replicas,
 				ActualReplicas:  actual,
-				Status:          deriveStatus(svc.Spec.Replicas, actual),
+				Status:          serviceStatus(svc, actual),
 			})
 			out.TotalServices++
 		}
