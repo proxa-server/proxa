@@ -90,6 +90,26 @@ func requestBody(b *bytes.Reader) *bytes.Reader {
 	return b
 }
 
+// Scale sets a service's desired replica count via
+// POST /api/v1/projects/{project}/services/{name}/scale.
+// Idempotent: returns nil if the service does not exist.
+func (c *Client) Scale(ctx context.Context, project, name string, replicas int) error {
+	path := fmt.Sprintf("/api/v1/projects/%s/services/%s/scale", project, name)
+	body := map[string]int{"replicas": replicas}
+	resp, err := c.do(ctx, http.MethodPost, path, body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil // idempotent down on missing service
+	}
+	if resp.StatusCode/100 != 2 {
+		return decodeAPIError(resp)
+	}
+	return nil
+}
+
 // SystemStatus fetches GET /api/v1/system/status and decodes it into
 // the loose-typed map shape that the JSON API returns.
 func (c *Client) SystemStatus(ctx context.Context) (map[string]any, error) {

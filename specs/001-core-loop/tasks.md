@@ -257,7 +257,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Implementation for User Story 4
 
-- [ ] T056 [US4] Create `internal/cli/down.go` implementing `proxa down <service>` (resolves project from `--project` flag, default `default`). Calls `client.Scale(project, name, 0)` (which hits `POST .../scale`). Exit 0 on success even if service didn't exist (idempotent down). Commit: `feat(cli): implement proxa down`.
+- [X] T056 [US4] Create `internal/cli/down.go` implementing `proxa down <service>` (resolves project from `--project` flag, default `default`). Calls `client.Scale(project, name, 0)` (which hits `POST .../scale`). Exit 0 on success even if service didn't exist (idempotent down). Commit: `feat(cli): implement proxa down`.
 
 - [ ] T057 [US4] Add `internal/cli/down_test.go` covering: idempotent down on nonexistent service, scale-zero round-trip, project flag resolution. Commit: `test(cli): cover proxa down command paths`.
 
