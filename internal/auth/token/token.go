@@ -71,10 +71,15 @@ func (a *Authenticator) RotateCredentials(ctx context.Context, subjectID string)
 	return auth.ErrNotSupported
 }
 
-// bearerToken parses an "Authorization: Bearer <token>" header.
-// Falls back to the proxa_token cookie (set by the UI middleware
-// when the user lands at /ui/?token=...) and finally to the
-// ?token= query parameter (browser-friendly first-visit URL).
+// bearerToken parses credentials from the request, in priority order:
+//
+//  1. Explicit Authorization: Bearer header (programmatic clients).
+//  2. ?token= query parameter (one-time browser landing URL — wins
+//     over the cookie so a stale cookie from a previous server session
+//     never blocks an explicit token paste).
+//  3. proxa_token cookie (set after the first ?token= visit; used by
+//     subsequent same-tab navigations and HTMX polls).
+//
 // Returns the token and true on success.
 func bearerToken(r *http.Request) (string, bool) {
 	if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") {
@@ -82,11 +87,11 @@ func bearerToken(r *http.Request) (string, bool) {
 			return tok, true
 		}
 	}
-	if c, err := r.Cookie("proxa_token"); err == nil && c.Value != "" {
-		return c.Value, true
-	}
 	if tok := r.URL.Query().Get("token"); tok != "" {
 		return tok, true
+	}
+	if c, err := r.Cookie("proxa_token"); err == nil && c.Value != "" {
+		return c.Value, true
 	}
 	return "", false
 }
