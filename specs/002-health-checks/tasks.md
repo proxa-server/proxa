@@ -131,11 +131,11 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Modify `internal/reconciler/diff.go`: in addition to "non-running state" containers, treat containers whose probe Snapshot.HealthOK=false as removable (they occupy the slot but are unhealthy). Generate a Remove action for them; the desired-side loop then generates a Create. Add a comment block explaining the symmetry with the dead-container case from 001. Commit: `feat(reconciler): treat probe-unhealthy containers as removable in diff`.
+- [X] T022 [US2] Modify `internal/reconciler/diff.go`: in addition to "non-running state" containers, treat containers whose probe Snapshot.HealthOK=false as removable (they occupy the slot but are unhealthy). Generate a Remove action for them; the desired-side loop then generates a Create. Add a comment block explaining the symmetry with the dead-container case from 001. Commit: `feat(reconciler): treat probe-unhealthy containers as removable in diff`.
 
-- [ ] T023 [P] [US2] Extend `internal/reconciler/diff_test.go` with `TestComputeRemovesProbeUnhealthyContainer` — fake Snapshot map shows replica 1 unhealthy → diff returns Remove(c1) + Create(replica=1). Commit: `test(reconciler): cover probe-unhealthy container removal`.
+- [X] T023 [P] [US2] Extend `internal/reconciler/diff_test.go` with `TestComputeRemovesProbeUnhealthyContainer` — fake Snapshot map shows replica 1 unhealthy → diff returns Remove(c1) + Create(replica=1). Commit: `test(reconciler): cover probe-unhealthy container removal`.
 
-- [ ] T024 [US2] Add `tests/e2e/health_restart_test.go` (build tag `e2e`) covering SC-002-2: deploy a service whose `/health` returns 200 initially, then `docker exec <container> killall whoami` to make it stop responding; poll for the container to be replaced (different container ID for the same replica name) within `interval × retries + 5s`. Commit: `test(e2e): cover failed-probe restart cycle (SC-002-2)`.
+- [X] T024 [US2] Add `tests/e2e/health_restart_test.go` (build tag `e2e`) covering SC-002-2: deploy a service whose `/health` returns 200 initially, then `docker exec <container> killall whoami` to make it stop responding; poll for the container to be replaced (different container ID for the same replica name) within `interval × retries + 5s`. Commit: `test(e2e): cover failed-probe restart cycle (SC-002-2)`.
 
 **Checkpoint**: SC-002-2 passes. Dashboard transitions: healthy → degraded → reconciling → healthy across the rotation.
 
@@ -147,7 +147,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 **Independent Test**: Deploy a service with `[health].command = ["sh", "-c", "exit 0"]`; status reaches `healthy`. Replace command with `["sh", "-c", "exit 1"]`; container gets restarted.
 
-- [ ] T025 [US3] Add `tests/e2e/health_exec_test.go` (build tag `e2e`) covering SC-002-3 + SC-004: deploy a service with exec probe that always succeeds → status healthy; flip TOML to a command that always fails → reconciler restarts. Commit: `test(e2e): cover exec probe success and failure (SC-002-3, SC-004)`.
+- [X] T025 [US3] Add `tests/e2e/health_exec_test.go` (build tag `e2e`) covering SC-002-3 + SC-004: deploy a service with exec probe that always succeeds → status healthy; flip TOML to a command that always fails → reconciler restarts. Commit: `test(e2e): cover exec probe success and failure (SC-002-3, SC-004)`.
 
 **Checkpoint**: SC-002-3 + SC-004 pass. The probe package's exec path is exercised end-to-end against real Docker.
 
@@ -157,7 +157,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 **Goal**: A 3-replica service with one failing replica shows `degraded`; recovers to `healthy` once the bad replica is replaced.
 
-- [ ] T026 [US4] Add `tests/e2e/health_partial_test.go` (build tag `e2e`) covering SC-002-4 + SC-003: deploy service with replicas=3, kill workload process inside replica 1; assert status transitions to `degraded` (visible in `proxa ps`) while the rotation happens; assert healthy returns once the new replica passes its first probe. Commit: `test(e2e): cover multi-replica partial degrade (SC-002-4, SC-003)`.
+- [X] T026 [US4] Add `tests/e2e/health_partial_test.go` (build tag `e2e`) covering SC-002-4 + SC-003: deploy service with replicas=3, kill workload process inside replica 1; assert status transitions to `degraded` (visible in `proxa ps`) while the rotation happens; assert healthy returns once the new replica passes its first probe. Commit: `test(e2e): cover multi-replica partial degrade (SC-002-4, SC-003)`.
 
 **Checkpoint**: SC-002-4 + SC-003 pass. Aggregation logic verified end-to-end.
 
@@ -171,13 +171,13 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Strategy abstraction + StartFirst
 
-- [ ] T027 [US5] Create `internal/reconciler/strategy.go` with the `Strategy` interface (`Name()`, `Apply(ctx, Request) error`), `Request` struct, `ErrRolledBack` sentinel, and `SelectStrategy(spec)` helper, all per `contracts/strategy.md`. Same file ALSO defines `StartFirst` (probe-gated rollover) following the 9-step contract from strategy.md. Commit: `feat(reconciler): add Strategy interface and StartFirst implementation`.
+- [X] T027 [US5] Create `internal/reconciler/strategy.go` with the `Strategy` interface (`Name()`, `Apply(ctx, Request) error`), `Request` struct, `ErrRolledBack` sentinel, and `SelectStrategy(spec)` helper, all per `contracts/strategy.md`. Same file ALSO defines `StartFirst` (probe-gated rollover) following the 9-step contract from strategy.md. Commit: `feat(reconciler): add Strategy interface and StartFirst implementation`.
 
-- [ ] T028 [P] [US5] Add `internal/reconciler/strategy_test.go` covering StartFirst: success path (new probe passes → old removed), rollback path (new probe never passes → ErrRolledBack returned, old still running). Uses fake Runtime + fake probe.Manager. Commit: `test(reconciler): cover StartFirst success and rollback paths`.
+- [X] T028 [P] [US5] Add `internal/reconciler/strategy_test.go` covering StartFirst: success path (new probe passes → old removed), rollback path (new probe never passes → ErrRolledBack returned, old still running). Uses fake Runtime + fake probe.Manager. Commit: `test(reconciler): cover StartFirst success and rollback paths`.
 
-- [ ] T029 [US5] Modify `internal/reconciler/action.go`: `Apply` for `ActionReplace` now constructs a `Request` and calls `SelectStrategy(spec).Apply(ctx, req)`. ActionCreate / ActionRemove paths unchanged. Commit: `feat(reconciler): route Replace actions through Strategy`.
+- [X] T029 [US5] Modify `internal/reconciler/action.go`: `Apply` for `ActionReplace` now constructs a `Request` and calls `SelectStrategy(spec).Apply(ctx, req)`. ActionCreate / ActionRemove paths unchanged. Commit: `feat(reconciler): route Replace actions through Strategy`.
 
-- [ ] T030 [US5] Add `tests/e2e/upgrade_stateless_test.go` (build tag `e2e`) covering SC-002-5: deploy whoami with replicas=2 and host port; spawn a background goroutine that hits `localhost:<port>` every 100ms recording fail count; flip the TOML's image to a different whoami tag; re-run `proxa up`; wait for rollover to complete; assert background fail count == 0 across the entire window. Commit: `test(e2e): cover zero-downtime stateless upgrade (SC-002-5)`.
+- [X] T030 [US5] Add `tests/e2e/upgrade_stateless_test.go` (build tag `e2e`) covering SC-002-5: deploy whoami with replicas=2 and host port; spawn a background goroutine that hits `localhost:<port>` every 100ms recording fail count; flip the TOML's image to a different whoami tag; re-run `proxa up`; wait for rollover to complete; assert background fail count == 0 across the entire window. Commit: `test(e2e): cover zero-downtime stateless upgrade (SC-002-5)`.
 
 **Checkpoint**: SC-002-5 passes. §VIII Zero-Downtime principle is now genuinely satisfied (closes 001's Complexity Tracking deviation #2).
 
@@ -189,11 +189,11 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### StopFirst
 
-- [ ] T031 [US6] Extend `internal/reconciler/strategy.go` with `StopFirst` impl per `contracts/strategy.md` (stop old → wait for exit → remove old → create new → probe new). No rollback (per contract: stop-first does NOT roll back). Commit: `feat(reconciler): add StopFirst strategy for stateful workloads`.
+- [X] T031 [US6] Extend `internal/reconciler/strategy.go` with `StopFirst` impl per `contracts/strategy.md` (stop old → wait for exit → remove old → create new → probe new). No rollback (per contract: stop-first does NOT roll back). Commit: `feat(reconciler): add StopFirst strategy for stateful workloads`.
 
-- [ ] T032 [P] [US6] Extend `internal/reconciler/strategy_test.go` with StopFirst cases: old container fully exits before new is created (verify via fake Runtime call ordering); new probe failure logs WARN but does not roll back. Commit: `test(reconciler): cover StopFirst sequencing and no-rollback contract`.
+- [X] T032 [P] [US6] Extend `internal/reconciler/strategy_test.go` with StopFirst cases: old container fully exits before new is created (verify via fake Runtime call ordering); new probe failure logs WARN but does not roll back. Commit: `test(reconciler): cover StopFirst sequencing and no-rollback contract`.
 
-- [ ] T033 [US6] Add `tests/e2e/upgrade_stateful_test.go` (build tag `e2e`) covering SC-002-6: deploy postgres-style service with `stateful=true strategy="stop-first"` (use `redis:7-alpine` for speed since postgres needs minutes to boot); kick off `proxa up` with new image in background; sample `docker ps --filter name=proxa-default-redis-0 --format '{{.Status}}'` every 200ms during the rollover; assert no sample ever shows two "Up" lines simultaneously. Commit: `test(e2e): cover stop-first never has two writers simultaneously (SC-002-6)`.
+- [X] T033 [US6] Add `tests/e2e/upgrade_stateful_test.go` (build tag `e2e`) covering SC-002-6: deploy postgres-style service with `stateful=true strategy="stop-first"` (use `redis:7-alpine` for speed since postgres needs minutes to boot); kick off `proxa up` with new image in background; sample `docker ps --filter name=proxa-default-redis-0 --format '{{.Status}}'` every 200ms during the rollover; assert no sample ever shows two "Up" lines simultaneously. Commit: `test(e2e): cover stop-first never has two writers simultaneously (SC-002-6)`.
 
 **Checkpoint**: SC-002-6 passes. All six user stories independently testable.
 
@@ -201,11 +201,11 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ## Phase 9: Polish & Cross-Cutting
 
-- [ ] T034 [P] Add `tests/e2e/health_no_block_test.go` (build tag `e2e`) covering SC-002-8 regression check: deploy a service WITHOUT a `[health]` block; assert behavior identical to v0.1.0 (status healthy when running, no probe goroutines started). Commit: `test(e2e): cover no-regression for services without [health] block (SC-002-8)`.
+- [X] T034 [P] Add `tests/e2e/health_no_block_test.go` (build tag `e2e`) covering SC-002-8 regression check: deploy a service WITHOUT a `[health]` block; assert behavior identical to v0.1.0 (status healthy when running, no probe goroutines started). Commit: `test(e2e): cover no-regression for services without [health] block (SC-002-8)`.
 
-- [ ] T035 Re-run the license audit script from 001's T065 against the post-002 `go.sum`. Update `docs/licenses.md` if any new transitives entered (none expected — this feature uses zero new direct deps). Commit: `docs(licenses): refresh transitive license audit for 002-health-checks`.
+- [X] T035 Re-run the license audit script from 001's T065 against the post-002 `go.sum`. Update `docs/licenses.md` if any new transitives entered (none expected — this feature uses zero new direct deps). Commit: `docs(licenses): refresh transitive license audit for 002-health-checks`.
 
-- [ ] T036 Walk `quickstart.md` end-to-end on a clean `${PROXA_DATA_DIR}`. Record outcomes in `specs/002-health-checks/validation.md` mirroring 001's format: SC-by-SC table with PASS/READY/FAIL + evidence. Document any bugs caught + fixed during validation. Commit: `docs(spec): record quickstart validation results in specs/002-health-checks/`.
+- [X] T036 Walk `quickstart.md` end-to-end on a clean `${PROXA_DATA_DIR}`. Record outcomes in `specs/002-health-checks/validation.md` mirroring 001's format: SC-by-SC table with PASS/READY/FAIL + evidence. Document any bugs caught + fixed during validation. Commit: `docs(spec): record quickstart validation results in specs/002-health-checks/`.
 
 **Checkpoint (end of feature)**: All eight spec success criteria PASS or READY (CI-green checks confirmed post-push). `git log --oneline 002-health-checks ^main` shows one commit per task with constitution-§XI-compliant messages.
 
