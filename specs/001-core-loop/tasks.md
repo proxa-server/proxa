@@ -243,7 +243,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Implementation for User Story 3
 
-- [ ] T055 [US3] Add an integration test at `tests/e2e/scale_test.go` (build-tagged `e2e`): deploy 3 replicas, edit-replace TOML to 5 replicas, re-`up`, poll for replica count = 5; then back to 1, verify shrink. Asserts SC-003. Commit: `test(e2e): cover replica scale up and down (SC-003)`.
+- [X] T055 [US3] Add an integration test at `tests/e2e/scale_test.go` (build-tagged `e2e`): deploy 3 replicas, edit-replace TOML to 5 replicas, re-`up`, poll for replica count = 5; then back to 1, verify shrink. Asserts SC-003. Commit: `test(e2e): cover replica scale up and down (SC-003)`.
 
 **Checkpoint**: SC-003 passes. No new production code — this story emerges from `proxa up` being idempotent + the reconciler's diff handling.
 
