@@ -16,7 +16,7 @@ Proxa is a self-hosted container orchestrator built as a single Go binary. Apach
 - Docker API via `docker/docker/client` (behind `Runtime` interface)
 - CertMagic for L7 TLS, Go stdlib `net` for L4 TCP/UDP
 - age for secret encryption
-- HTMX + Alpine.js + Tailwind embedded via `go:embed` (no Node.js)
+- HTMX + Alpine.js + Tailwind embedded via `go:embed` (no Node.js). Frontend assets vendored under `internal/web/static/` because Go's embed directive can only see files at-or-below the embedding package. Source CSS lives at `web/_src/app.css`; regenerate with `cp web/_src/app.css internal/web/static/app.css` (v0.0 hand-CSS) or `tailwindcss -i web/_src/app.css -o internal/web/static/app.css --minify` (v0.1+ Tailwind v4). HTMX/Alpine pinned versions documented in `internal/web/static/README.md`.
 - slog (stdlib) for structured logs as JSON to stderr
 - Tailscale tsnet + Headscale for mesh (v1.0+)
 

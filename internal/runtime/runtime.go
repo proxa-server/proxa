@@ -66,6 +66,10 @@ type ContainerSpec struct {
 	Labels    map[string]string // proxa.project, proxa.service, ...
 }
 
+// PortSpecAlias is a re-export for sub-packages that build host
+// configs without needing to import pkg/types directly.
+type PortSpecAlias = types.PortSpec
+
 // ImageInfo describes an image known to the runtime.
 type ImageInfo struct {
 	Ref     string

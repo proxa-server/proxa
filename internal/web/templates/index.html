@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proxa · Dashboard</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/htmx.min.js" defer></script>
+<script src="/static/alpine.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="/ui/">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="2" width="20" height="20" rx="6" fill="#2a9d8f" opacity=".15"/>
+      <path d="M7 8h4a3 3 0 0 1 0 6H7V8z" stroke="#2a9d8f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17 8v8" stroke="#2a9d8f" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="17" cy="8" r="1.5" fill="#2a9d8f"/>
+    </svg>
+    <span class="wordmark">Proxa</span>
+    <span class="badge">v0.0</span>
+  </a>
+  <div class="cluster-status">
+    <span class="dot green"></span>
+    <span>{{.Node.ID}} · {{.Node.Status}}</span>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Cluster overview</h1>
+      <div class="page-sub">{{len .Projects}} project(s) · {{.Node.ContainerCount}} container(s) running on this node</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">Projects</div>
+      <div class="stat-value">{{len .Projects}}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Services</div>
+      <div class="stat-value">{{.TotalServices}}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Containers</div>
+      <div class="stat-value">{{.Node.ContainerCount}}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Node</div>
+      <div class="stat-value mono" style="font-size:14px;padding-top:8px">{{.Node.ID}}</div>
+    </div>
+  </div>
+
+  <div class="card"
+       hx-get="/ui/services"
+       hx-trigger="every 5s"
+       hx-target="this"
+       hx-swap="outerHTML">
+    {{template "services_table.html" .}}
+  </div>
+
+  <div class="footer">
+    Read-only slim dashboard · refreshes every 5s ·
+    full dashboard with login + writes lands in Feature 004
+  </div>
+</div>
+
+</body>
+</html>

@@ -33,6 +33,10 @@ The operator runs `proxa down api`. Proxa sets the desired replica count to 0 in
 
 The operator runs `proxa ps`. Proxa queries the state store and the Docker runtime, then displays a table showing: service name, image, desired/actual replicas, status, and project.
 
+### SC-001-6: View running services in a slim dashboard
+
+The operator opens the dashboard URL surfaced by `proxa server` (default: `http://unix-socket/ui/`; over TCP if `--listen tcp://...` is configured) and sees a read-only table of all services across projects. The view auto-refreshes via HTMX polling. No write operations are possible from this dashboard in v0.0 — the full dashboard with login, write ops, log viewer, secrets management lands in Feature 004.
+
 ## Functional Requirements
 
 - FR-001: System MUST parse TOML task definitions conforming to the spec (Section 11) with validation of required fields and type checking
@@ -51,6 +55,7 @@ The operator runs `proxa ps`. Proxa queries the state store and the Docker runti
 - FR-014: `proxa ps` MUST display service name, project, image, desired/actual replicas, and status
 - FR-015: Container naming convention MUST be `proxa-{project}-{service}-{replica-index}`
 - FR-016: All operations MUST respect project scoping — a service in project "socio-do" is independent from a same-named service in "kut-do"
+- FR-017: System MUST serve a read-only dashboard at `/ui/` over the same listener as the `/api/v1` endpoints, embedded into the binary via `go:embed`. Frontend trio per constitution §V: HTMX + Alpine.js + Tailwind. Auth: when the listener is a Unix socket, file-system permissions act as the access control and `/ui/` does not require a Bearer token; when the listener is TCP, `/ui/` returns `401` in v0.0 (the login form arrives with the full dashboard in Feature 004).
 
 ## Entities
 
@@ -67,7 +72,8 @@ The operator runs `proxa ps`. Proxa queries the state store and the Docker runti
 - SC-004: `proxa down` removes all containers for the service within one reconciliation tick
 - SC-005: `proxa ps` accurately reflects the current state of all managed services
 - SC-006: Two services with the same name in different projects coexist without conflict
-- SC-007: Running `proxa up` without `proxa init` first produces a clear error message
+- SC-007: Running `proxa up` without `proxa init` first produces a clear error message that names `proxa init` as the resolution
+- SC-008: After deploying a service via `proxa up`, opening `/ui/` over the Unix socket renders an HTML table containing the service with correct desired/actual replica counts. The table refreshes within ~5s of state changes (HTMX `hx-get` poll) without a full page reload
 
 ## Assumptions
 
@@ -92,7 +98,7 @@ The operator runs `proxa ps`. Proxa queries the state store and the Docker runti
 
 - Health checks (Feature 002)
 - HTTP/TCP ingress (Feature 003)
-- Admin dashboard (Feature 004)
+- Full admin dashboard with login form, write operations, log viewer, secrets management UI (Feature 004) — a slim read-only view ships in this feature per FR-017 / SC-001-6 / SC-008
 - Secrets management (Feature 005)
 - Config maps (Feature 006)
 - Deployment strategies — canary/blue-green (Feature 007)
