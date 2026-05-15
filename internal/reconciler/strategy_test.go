@@ -73,6 +73,12 @@ func (s *strategyRuntime) StartContainer(_ context.Context, id string) error {
 }
 func (s *strategyRuntime) StopContainer(_ context.Context, id string, _ time.Duration) error {
 	s.record("Stop:" + id)
+	s.mu.Lock()
+	if c, ok := s.containers[id]; ok {
+		c.State = "exited"
+		s.containers[id] = c
+	}
+	s.mu.Unlock()
 	return nil
 }
 func (s *strategyRuntime) RemoveContainer(_ context.Context, id string, _ bool) error {
@@ -205,6 +211,69 @@ func TestStartFirst_RollbackOnUnhealthy(t *testing.T) {
 		if newGone {
 			// the runtime's RemoveContainer deletes the entry — good
 			_ = newGone
+		}
+	})
+}
+
+func TestStopFirst_OldExitsBeforeNewCreated(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		rtimpl := newStrategyRuntime()
+		rtimpl.execExitCode.Store(0) // healthy
+
+		probes := probe.New(rtimpl, slog.New(slog.DiscardHandler))
+		mgrCtx, cancelMgr := context.WithCancel(t.Context())
+		defer cancelMgr()
+		go probes.Run(mgrCtx)
+
+		s := &StopFirst{}
+		err := s.Apply(t.Context(), mkStrategyReq(rtimpl, probes, "old-id"))
+		if err != nil {
+			t.Fatalf("StopFirst.Apply returned %v, want nil", err)
+		}
+
+		rtimpl.mu.Lock()
+		calls := append([]string(nil), rtimpl.calls...)
+		rtimpl.mu.Unlock()
+		idxStopOld := indexOf(calls, "Stop:old-id")
+		idxRemoveOld := indexOf(calls, "Remove:old-id")
+		idxCreateNew := indexOf(calls, "Create:"+dockerlabels.ContainerNameFor("default", "web", 0))
+		if idxStopOld == -1 || idxRemoveOld == -1 || idxCreateNew == -1 {
+			t.Fatalf("expected Stop, Remove, Create calls; got %v", calls)
+		}
+		if !(idxStopOld < idxRemoveOld) {
+			t.Errorf("Stop:old must precede Remove:old; got %v", calls)
+		}
+		if !(idxRemoveOld < idxCreateNew) {
+			t.Errorf("Remove:old must precede Create:new (no two-writers); got %v", calls)
+		}
+	})
+}
+
+func TestStopFirst_DoesNotRollBackOnUnhealthy(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		rtimpl := newStrategyRuntime()
+		rtimpl.execExitCode.Store(1) // probe fails
+
+		probes := probe.New(rtimpl, slog.New(slog.DiscardHandler))
+		mgrCtx, cancelMgr := context.WithCancel(t.Context())
+		defer cancelMgr()
+		go probes.Run(mgrCtx)
+
+		s := &StopFirst{}
+		err := s.Apply(t.Context(), mkStrategyReq(rtimpl, probes, "old-id"))
+		if err != nil {
+			t.Fatalf("StopFirst.Apply returned %v, want nil (no rollback contract)", err)
+		}
+
+		rtimpl.mu.Lock()
+		calls := append([]string(nil), rtimpl.calls...)
+		_, newExists := rtimpl.containers["new-id"]
+		rtimpl.mu.Unlock()
+		if indexOf(calls, "Remove:new-id") != -1 {
+			t.Errorf("stop-first must NOT remove the new container on probe failure, calls=%v", calls)
+		}
+		if !newExists {
+			t.Errorf("new container should remain; reconciler tick decides recovery")
 		}
 	})
 }
