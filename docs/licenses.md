@@ -62,3 +62,8 @@ To sanity-check after future `go get`s:
 go list -m all | grep -v '^github.com/proxa-server/proxa' | sort -u | wc -l
 # compare counts; spot-check any new entry on pkg.go.dev/<module>?tab=licenses
 ```
+
+## Refresh log
+
+- **2026-05-13** — initial audit at v0.1.0 (feature 001 polish T065). Module count: ~99.
+- **2026-05-15** — feature 002 (health checks) audit refresh. Module count: 102 (one new test-only transitive surface from `docker/docker/pkg/stdcopy` import path resolution; no new direct deps; probe package is stdlib-only). All licenses still on the §IX allow-list.
