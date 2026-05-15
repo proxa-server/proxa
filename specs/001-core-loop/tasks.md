@@ -277,7 +277,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T059 [US5] Create `internal/cli/ps.go` implementing `proxa ps`: calls `client.Status()` (which hits `GET /api/v1/system/status`), formats the response as a table to stdout (PROJECT, SERVICE, IMAGE, DESIRED, ACTUAL, STATUS columns). Use `text/tabwriter` from stdlib for alignment. Support `-o json` flag for machine-readable output. Commit: `feat(cli): implement proxa ps with table and JSON output`.
 
-- [ ] T060 [US5] Add `internal/cli/ps_test.go` covering: table rendering with one project / multi-project / empty cluster, JSON output format. Use a fake `client` interface. Commit: `test(cli): cover proxa ps formatting`.
+- [X] T060 [US5] Add `internal/cli/ps_test.go` covering: table rendering with one project / multi-project / empty cluster, JSON output format. Use a fake `client` interface. Commit: `test(cli): cover proxa ps formatting`.
 
 - [ ] T061 [US5] Add an integration test at `tests/e2e/ps_test.go` (build-tagged `e2e`): deploy two services, `proxa ps`, parse the table, assert both rows present with correct desired/actual. Asserts SC-005. Commit: `test(e2e): cover proxa ps (SC-005)`.
 
