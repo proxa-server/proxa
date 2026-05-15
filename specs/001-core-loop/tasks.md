@@ -259,7 +259,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T056 [US4] Create `internal/cli/down.go` implementing `proxa down <service>` (resolves project from `--project` flag, default `default`). Calls `client.Scale(project, name, 0)` (which hits `POST .../scale`). Exit 0 on success even if service didn't exist (idempotent down). Commit: `feat(cli): implement proxa down`.
 
-- [ ] T057 [US4] Add `internal/cli/down_test.go` covering: idempotent down on nonexistent service, scale-zero round-trip, project flag resolution. Commit: `test(cli): cover proxa down command paths`.
+- [X] T057 [US4] Add `internal/cli/down_test.go` covering: idempotent down on nonexistent service, scale-zero round-trip, project flag resolution. Commit: `test(cli): cover proxa down command paths`.
 
 - [ ] T058 [US4] Add an integration test at `tests/e2e/down_test.go` (build-tagged `e2e`): deploy → down → poll for zero containers within 10s. Asserts SC-004. Commit: `test(e2e): cover proxa down (SC-004)`.
 
