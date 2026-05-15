@@ -1,0 +1,48 @@
+name: e2e
+
+# Opt-in workflow for the //go:build e2e end-to-end tests. Skipped on
+# every push by default — these tests require a Docker daemon, which
+# GitHub-hosted runners have but spinning containers up there is slow
+# and flaky for CI gating.
+#
+# To trigger:
+#   - Add the `e2e` label to a pull request, OR
+#   - Manually run via Actions → e2e → Run workflow
+
+on:
+  pull_request:
+    types: [labeled, synchronize, opened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  e2e:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'e2e')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+          cache: true
+
+      - name: Verify Docker available
+        run: docker info
+
+      - name: Build proxa
+        run: make build
+        env:
+          CGO_ENABLED: "0"
+
+      - name: Run e2e suite
+        run: make test-e2e
+        env:
+          CGO_ENABLED: "1" # -race needs cgo on linux/amd64
