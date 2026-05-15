@@ -65,7 +65,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T003 Extend `internal/parser/toml/validate.go` with `[health]` block validation per `data-model.md` rules: reject if both `path` and `command` set (`health-mutually-exclusive`), reject if `path` set but no port resolvable from `[health].port` or first `[[expose]].container` (`health-probe-needs-port`), reject `timeout > interval` (`health-timeout-out-of-range`), reject `retries < 1 || > 100` (`health-retries-out-of-range`). Commit: `feat(parser/toml): validate [health] block (mutual-exclusion, port resolution, durations)`.
 
-- [ ] T004 [P] Add fixture files under `internal/parser/toml/testdata/` — `invalid-health-mutual.toml` (both path and command), `invalid-health-needs-port.toml` (path set, no expose), `invalid-health-timeout-too-big.toml`, `invalid-health-bad-retries.toml`. Extend `parser_test.go` table with 4 entries asserting the new error codes. Commit: `test(parser/toml): cover [health] block validation`.
+- [X] T004 [P] Add fixture files under `internal/parser/toml/testdata/` — `invalid-health-mutual.toml` (both path and command), `invalid-health-needs-port.toml` (path set, no expose), `invalid-health-timeout-too-big.toml`, `invalid-health-bad-retries.toml`. Extend `parser_test.go` table with 4 entries asserting the new error codes. Commit: `test(parser/toml): cover [health] block validation`.
 
 ### Probe package
 
