@@ -41,6 +41,7 @@ type Runtime interface {
 	StartContainer(ctx context.Context, id string) error
 	StopContainer(ctx context.Context, id string, gracePeriod time.Duration) error
 	RemoveContainer(ctx context.Context, id string, force bool) error
+	RenameContainer(ctx context.Context, id, newName string) error
 	InspectContainer(ctx context.Context, id string) (*ContainerInfo, error)
 	ListContainers(ctx context.Context, filter ListFilter) ([]ContainerInfo, error)
 
@@ -148,6 +149,7 @@ func (noopRuntime) CreateContainer(context.Context, ContainerSpec) (string, erro
 func (noopRuntime) StartContainer(context.Context, string) error                       { return ErrNotImplemented }
 func (noopRuntime) StopContainer(context.Context, string, time.Duration) error         { return ErrNotImplemented }
 func (noopRuntime) RemoveContainer(context.Context, string, bool) error                { return ErrNotImplemented }
+func (noopRuntime) RenameContainer(context.Context, string, string) error              { return ErrNotImplemented }
 func (noopRuntime) InspectContainer(context.Context, string) (*ContainerInfo, error)   { return nil, ErrNotImplemented }
 func (noopRuntime) ListContainers(context.Context, ListFilter) ([]ContainerInfo, error) {
 	return nil, ErrNotImplemented

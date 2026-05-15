@@ -138,6 +138,7 @@ func (noopRuntime) CreateContainer(context.Context, rt.ContainerSpec) (string, e
 func (noopRuntime) StartContainer(context.Context, string) error                       { return nil }
 func (noopRuntime) StopContainer(context.Context, string, time.Duration) error         { return nil }
 func (noopRuntime) RemoveContainer(context.Context, string, bool) error                { return nil }
+func (noopRuntime) RenameContainer(context.Context, string, string) error              { return nil }
 func (noopRuntime) InspectContainer(context.Context, string) (*rt.ContainerInfo, error) {
 	return nil, errors.New("no")
 }

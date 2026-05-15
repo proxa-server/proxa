@@ -61,6 +61,7 @@ func (m *mockDockerClient) ContainerStart(ctx context.Context, id string, opts c
 }
 func (m *mockDockerClient) ContainerStop(context.Context, string, container.StopOptions) error { return nil }
 func (m *mockDockerClient) ContainerRemove(context.Context, string, container.RemoveOptions) error { return nil }
+func (m *mockDockerClient) ContainerRename(context.Context, string, string) error { return nil }
 func (m *mockDockerClient) ContainerInspect(context.Context, string) (container.InspectResponse, error) {
 	return container.InspectResponse{}, errors.New("not implemented in mock")
 }
