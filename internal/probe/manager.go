@@ -147,6 +147,18 @@ func (m *Manager) Untrack(containerID string) {
 	}
 }
 
+// TrackedIDs returns the container IDs currently tracked by the Manager.
+// Returned slice is a snapshot; safe to iterate without holding any lock.
+func (m *Manager) TrackedIDs() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]string, 0, len(m.entries))
+	for id := range m.entries {
+		out = append(out, id)
+	}
+	return out
+}
+
 // Snapshot returns the latest health snapshot for the container, or
 // (zero, false) if untracked.
 func (m *Manager) Snapshot(containerID string) (Snapshot, bool) {
