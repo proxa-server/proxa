@@ -167,6 +167,32 @@ func TestComputeRestartsExitedContainer(t *testing.T) {
 	}
 }
 
+func TestComputeRemovesProbeUnhealthyContainer(t *testing.T) {
+	svc := mkSvc("default", "web", "nginx:alpine", 2)
+	specHash := hash.Hash(svc.Spec)
+	c0 := mkContainer("c0-id", "default", "web", 0, specHash)
+	c1 := mkContainer("c1-id", "default", "web", 1, specHash)
+	probeUnhealthy := map[string]bool{"c1-id": true}
+
+	actions := Compute([]types.Service{svc}, []rt.ContainerInfo{c0, c1}, probeUnhealthy)
+
+	var removed, created bool
+	for _, a := range actions {
+		if a.Type == ActionRemove && a.ContainerID == "c1-id" && a.Reason == "probe streak exceeded retries" {
+			removed = true
+		}
+		if a.Type == ActionCreate && a.Replica == 1 {
+			created = true
+		}
+	}
+	if !removed {
+		t.Errorf("expected Remove(c1-id) with probe-streak reason, got %+v", actions)
+	}
+	if !created {
+		t.Errorf("expected Create(replica=1) to fill the freed slot, got %+v", actions)
+	}
+}
+
 func TestComputeMultiProjectIndependence(t *testing.T) {
 	socio := mkSvc("socio-do", "web", "nginx:alpine", 1)
 	kut := mkSvc("kut-do", "web", "nginx:alpine", 1)
