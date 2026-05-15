@@ -317,7 +317,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T062 Add an integration test at `tests/e2e/projects_test.go` (build-tagged `e2e`) covering SC-006: deploy `web` in projects `socio-do` and `kut-do` simultaneously, verify both run independently with distinct container names. Commit: `test(e2e): cover multi-project isolation (SC-006)`.
 
-- [ ] T063 [P] Add two integration tests under `tests/e2e/` (build-tagged `e2e`) covering SC-007: (a) `tests/e2e/no_init_test.go` — DataDir empty, `proxa up` exits 1 with stderr matching `proxa not initialized; run .proxa init.`; (b) `tests/e2e/no_daemon_test.go` — `proxa init` ran but server NOT running, `proxa up` exits 1 with stderr matching `cannot reach proxa server` and a hint. Commit: `test(e2e): cover clear errors for no-init and no-daemon (SC-007)`.
+- [X] T063 [P] Add two integration tests under `tests/e2e/` (build-tagged `e2e`) covering SC-007: (a) `tests/e2e/no_init_test.go` — DataDir empty, `proxa up` exits 1 with stderr matching `proxa not initialized; run .proxa init.`; (b) `tests/e2e/no_daemon_test.go` — `proxa init` ran but server NOT running, `proxa up` exits 1 with stderr matching `cannot reach proxa server` and a hint. Commit: `test(e2e): cover clear errors for no-init and no-daemon (SC-007)`.
 
 - [ ] T064 [P] Add a CI job to `.github/workflows/ci.yml` that runs `make test-e2e` only when a label `e2e` is on the PR (or manually triggered via `workflow_dispatch`); skips by default to keep the default CI fast. The dockerd-tagged unit-runtime tests stay opt-in (no hosted Docker). Commit: `chore(ci): add opt-in e2e job behind PR label`.
 
