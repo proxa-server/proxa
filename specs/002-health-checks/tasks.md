@@ -51,7 +51,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Add `ServiceStatusStopped types.ServiceStatus = "stopped"` const to `pkg/types/service.go` next to the existing status enum. Update doc comment to enumerate all six values. Commit: `feat(types): add ServiceStatusStopped to enum`.
+- [X] T001 [P] Add `ServiceStatusStopped types.ServiceStatus = "stopped"` const to `pkg/types/service.go` next to the existing status enum. Update doc comment to enumerate all six values. Commit: `feat(types): add ServiceStatusStopped to enum`.
 
 - [ ] T002 [P] Create the `internal/probe/` directory with `.gitkeep` placeholder (will be replaced by real files in Phase 2). Commit: `chore(repo): scaffold internal/probe package directory`.
 
