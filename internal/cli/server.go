@@ -75,6 +75,7 @@ func runServer(ctx context.Context, cfg *config.Config) error {
 	// Server.
 	srv := server.New(cfg, st, rt, recon, authn, authz)
 	srv.MountRoutes()
+	srv.MountUI()
 
 	// Run reconciler in background, server in foreground.
 	reconCtx, cancelRecon := context.WithCancel(ctx)

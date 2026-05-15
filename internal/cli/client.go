@@ -90,6 +90,24 @@ func requestBody(b *bytes.Reader) *bytes.Reader {
 	return b
 }
 
+// SystemStatus fetches GET /api/v1/system/status and decodes it into
+// the loose-typed map shape that the JSON API returns.
+func (c *Client) SystemStatus(ctx context.Context) (map[string]any, error) {
+	resp, err := c.do(ctx, http.MethodGet, "/api/v1/system/status", nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode/100 != 2 {
+		return nil, decodeAPIError(resp)
+	}
+	var out map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, fmt.Errorf("cli: decode status: %w", err)
+	}
+	return out, nil
+}
+
 // UpsertService PUTs a TaskDef to the API and returns the resulting Service.
 func (c *Client) UpsertService(ctx context.Context, td types.TaskDef) (*types.Service, error) {
 	path := fmt.Sprintf("/api/v1/projects/%s/services/%s", td.Project, td.Name)

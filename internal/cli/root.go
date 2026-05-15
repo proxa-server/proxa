@@ -22,6 +22,7 @@ func NewRoot() *cobra.Command {
 	root.AddCommand(newInitCmd())
 	root.AddCommand(newServerCmd())
 	root.AddCommand(newUpCmd())
+	root.AddCommand(newPsCmd())
 
 	return root
 }

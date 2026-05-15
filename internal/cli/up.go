@@ -62,12 +62,10 @@ func runUp(ctx interface{ Done() <-chan struct{} }, cfg *config.Config, path str
 }
 
 // ctxAdapter satisfies context.Context against the cmd.Context() Done()-only
-// shape we accept above. Cobra's ctx is a real context.Context already; the
-// adapter exists only because runUp's interface{Done} signature predates a
-// later refactor and we keep it stable.
+// shape we accept above.
 type ctxAdapter struct{ inner interface{ Done() <-chan struct{} } }
 
-func (a ctxAdapter) Deadline() (time.Time, bool)       { return time.Time{}, false }
-func (a ctxAdapter) Done() <-chan struct{}             { return a.inner.Done() }
-func (a ctxAdapter) Err() error                        { return nil }
-func (a ctxAdapter) Value(any) any                     { return nil }
+func (a ctxAdapter) Deadline() (time.Time, bool) { return time.Time{}, false }
+func (a ctxAdapter) Done() <-chan struct{}       { return a.inner.Done() }
+func (a ctxAdapter) Err() error                  { return nil }
+func (a ctxAdapter) Value(any) any               { return nil }

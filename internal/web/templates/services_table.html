@@ -1,0 +1,51 @@
+<div class="card"
+     hx-get="/ui/services"
+     hx-trigger="every 5s"
+     hx-target="this"
+     hx-swap="outerHTML">
+  <div class="card-header">Services</div>
+  {{- if eq .TotalServices 0 -}}
+    <div class="empty">
+      No services yet.<br>
+      <span style="margin-top:12px;display:inline-block">Deploy one with <code>proxa up service.toml</code></span>
+    </div>
+  {{- else -}}
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Project</th>
+        <th>Service</th>
+        <th>Image</th>
+        <th>Desired</th>
+        <th>Actual</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{- range .Projects -}}
+        {{- $project := .Name -}}
+        {{- range .Services -}}
+          <tr>
+            <td><span class="chip chip-brand">{{$project}}</span></td>
+            <td class="svc-name">{{.Name}}</td>
+            <td class="svc-image">{{.Image}}</td>
+            <td class="svc-replicas">{{.DesiredReplicas}}</td>
+            <td class="svc-replicas">{{.ActualReplicas}}</td>
+            <td>
+              {{- if eq .Status "healthy" -}}
+                <span class="chip chip-green">● healthy</span>
+              {{- else if eq .Status "degraded" -}}
+                <span class="chip chip-amber">● degraded</span>
+              {{- else if eq .Status "failed" -}}
+                <span class="chip chip-red">● failed</span>
+              {{- else -}}
+                <span class="chip chip-neutral">● {{.Status}}</span>
+              {{- end -}}
+            </td>
+          </tr>
+        {{- end -}}
+      {{- end -}}
+    </tbody>
+  </table>
+  {{- end -}}
+</div>
