@@ -15,6 +15,7 @@ import (
 	"github.com/proxa-server/proxa/internal/auth/dbpolicy"
 	"github.com/proxa-server/proxa/internal/auth/token"
 	"github.com/proxa-server/proxa/internal/config"
+	"github.com/proxa-server/proxa/internal/probe"
 	"github.com/proxa-server/proxa/internal/reconciler"
 	"github.com/proxa-server/proxa/internal/runtime/docker"
 	"github.com/proxa-server/proxa/internal/server"
@@ -66,10 +67,14 @@ func runServer(ctx context.Context, cfg *config.Config) error {
 	authn := token.New(st)
 	authz := dbpolicy.New(st)
 
+	// Probe manager (health checks per replica).
+	probes := probe.New(rt, logger)
+
 	// Reconciler.
 	recon := reconciler.New(st, rt, reconciler.Options{
 		TickInterval: cfg.TickInterval,
 		Logger:       logger,
+		Probes:       probes,
 	})
 
 	// Server.
