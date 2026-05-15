@@ -69,31 +69,31 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Probe package
 
-- [ ] T005 Create `internal/probe/probe.go` declaring the `Probe` interface (`Name()`, `Run(ctx) Result`) and the `Result` struct (`At, Healthy, Latency, Err`). Doc comment links to `specs/002-health-checks/contracts/probe.md`. Commit: `feat(probe): declare Probe interface and Result type`.
+- [X] T005 Create `internal/probe/probe.go` declaring the `Probe` interface (`Name()`, `Run(ctx) Result`) and the `Result` struct (`At, Healthy, Latency, Err`). Doc comment links to `specs/002-health-checks/contracts/probe.md`. Commit: `feat(probe): declare Probe interface and Result type`.
 
-- [ ] T006 Create `internal/probe/result.go` with the `History` ring buffer (capped at 32 entries, mutex-protected) and helpers `History.Append(r)`, `History.LastErr() string`, `History.Streak() int`. Imports stdlib only. Commit: `feat(probe): add History ring buffer for per-replica probe results`.
+- [X] T006 Create `internal/probe/result.go` with the `History` ring buffer (capped at 32 entries, mutex-protected) and helpers `History.Append(r)`, `History.LastErr() string`, `History.Streak() int`. Imports stdlib only. Commit: `feat(probe): add History ring buffer for per-replica probe results`.
 
-- [ ] T007 [P] Create `internal/probe/http.go` implementing `HTTPProbe` per `contracts/probe.md`: constructor `NewHTTPProbe(containerIP, port int, path string, timeout)`, custom `http.Client` with `IdleConnTimeout=15s` and `MaxIdleConnsPerHost=1`, `Run(ctx)` issues GET with a `min(ctx.Deadline, time.Now+Timeout)` deadline, drains body, returns Result. Commit: `feat(probe): implement HTTPProbe via stdlib net/http`.
+- [X] T007 [P] Create `internal/probe/http.go` implementing `HTTPProbe` per `contracts/probe.md`: constructor `NewHTTPProbe(containerIP, port int, path string, timeout)`, custom `http.Client` with `IdleConnTimeout=15s` and `MaxIdleConnsPerHost=1`, `Run(ctx)` issues GET with a `min(ctx.Deadline, time.Now+Timeout)` deadline, drains body, returns Result. Commit: `feat(probe): implement HTTPProbe via stdlib net/http`.
 
-- [ ] T008 [P] Add `internal/probe/http_test.go` with table-driven tests against `httptest.Server`: 200 OK → healthy; 500 → unhealthy; 200 with 5s sleep + 1s timeout → unhealthy with timeout error; ctx cancel mid-flight → returns Healthy=false promptly. Commit: `test(probe): cover HTTPProbe success/failure/timeout/cancel`.
+- [X] T008 [P] Add `internal/probe/http_test.go` with table-driven tests against `httptest.Server`: 200 OK → healthy; 500 → unhealthy; 200 with 5s sleep + 1s timeout → unhealthy with timeout error; ctx cancel mid-flight → returns Healthy=false promptly. Commit: `test(probe): cover HTTPProbe success/failure/timeout/cancel`.
 
-- [ ] T009 [P] Create `internal/probe/exec.go` with `ExecProbe` per `contracts/probe.md`: constructor `NewExecProbe(rt runtime.Runtime, containerID, cmd []string, timeout)`, `Run(ctx)` calls `rt.Exec` with `runtime.ExecOpts{Timeout: timeout}`, exit code 0 → healthy. Commit: `feat(probe): implement ExecProbe delegating to Runtime.Exec`.
+- [X] T009 [P] Create `internal/probe/exec.go` with `ExecProbe` per `contracts/probe.md`: constructor `NewExecProbe(rt runtime.Runtime, containerID, cmd []string, timeout)`, `Run(ctx)` calls `rt.Exec` with `runtime.ExecOpts{Timeout: timeout}`, exit code 0 → healthy. Commit: `feat(probe): implement ExecProbe delegating to Runtime.Exec`.
 
-- [ ] T010 [P] Add `internal/probe/exec_test.go` with table-driven tests against an in-package fake `runtime.Runtime`: exit 0 → healthy, exit 1 → unhealthy with err, runtime err propagates as Healthy=false. Commit: `test(probe): cover ExecProbe outcomes`.
+- [X] T010 [P] Add `internal/probe/exec_test.go` with table-driven tests against an in-package fake `runtime.Runtime`: exit 0 → healthy, exit 1 → unhealthy with err, runtime err propagates as Healthy=false. Commit: `test(probe): cover ExecProbe outcomes`.
 
 ### Real Runtime.Exec impl (blocks ExecProbe usage in real Docker, not its unit tests)
 
-- [ ] T011 Replace the v0.1.0 stub in `internal/runtime/docker/exec.go` with a real implementation: `ContainerExecCreate` with `AttachStdout=true, AttachStderr=true`, `ContainerExecAttach` to read output, `ContainerExecInspect` to fetch ExitCode. Honor `opts.Timeout` via `context.WithTimeout` wrapping the API calls. Returns `*runtime.ExecResult{ExitCode, Stdout, Stderr}`. Update `Stats` and `StreamLogs` stubs to remain `ErrNotImplemented` (those land in Feature 002+ and 004). Commit: `feat(runtime/docker): implement real Exec via ContainerExec API`.
+- [X] T011 Replace the v0.1.0 stub in `internal/runtime/docker/exec.go` with a real implementation: `ContainerExecCreate` with `AttachStdout=true, AttachStderr=true`, `ContainerExecAttach` to read output, `ContainerExecInspect` to fetch ExitCode. Honor `opts.Timeout` via `context.WithTimeout` wrapping the API calls. Returns `*runtime.ExecResult{ExitCode, Stdout, Stderr}`. Update `Stats` and `StreamLogs` stubs to remain `ErrNotImplemented` (those land in Feature 002+ and 004). Commit: `feat(runtime/docker): implement real Exec via ContainerExec API`.
 
-- [ ] T012 [P] Add unit-test coverage in `internal/runtime/docker/exec_test.go` using the existing `mockDockerClient` from 001 — extend it with `ContainerExecCreate/Attach/Inspect` recorders; assert Exec passes through ExitCode + Stdout slices correctly. Commit: `test(runtime/docker): cover Exec mock-client paths`.
+- [X] T012 [P] Add unit-test coverage in `internal/runtime/docker/exec_test.go` using the existing `mockDockerClient` from 001 — extend it with `ContainerExecCreate/Attach/Inspect` recorders; assert Exec passes through ExitCode + Stdout slices correctly. Commit: `test(runtime/docker): cover Exec mock-client paths`.
 
-- [ ] T013 Extend `internal/runtime/docker/integration_test.go` (build tag `dockerd`) with a real-Docker test for Exec: pull `alpine`, create + start container running `sleep 60`, call `Exec(ctx, id, ["sh", "-c", "echo hello && exit 0"])`, assert ExitCode=0 and Stdout contains "hello". Commit: `test(runtime/docker): cover real Exec against dockerd`.
+- [X] T013 Extend `internal/runtime/docker/integration_test.go` (build tag `dockerd`) with a real-Docker test for Exec: pull `alpine`, create + start container running `sleep 60`, call `Exec(ctx, id, ["sh", "-c", "echo hello && exit 0"])`, assert ExitCode=0 and Stdout contains "hello". Commit: `test(runtime/docker): cover real Exec against dockerd`.
 
 ### Probe Manager
 
-- [ ] T014 Create `internal/probe/manager.go` per `contracts/probe.md`: `Manager` struct + `New(rt, log)` + `Track(containerID, spec)` (idempotent — re-tracking same spec is no-op; different spec restarts goroutine) + `Untrack(containerID)` + `Snapshot(containerID) (Snapshot, bool)` + `Run(ctx)` (blocks until ctx cancels; returns when all tracked goroutines have exited). Per-replica goroutine implements R-002 (fixed interval from start, skip if in-flight) and R-003 (strict consecutive streak). Persists Snapshot via in-package `sync.Map`. Commit: `feat(probe): add per-replica probe Manager with goroutine lifecycle`.
+- [X] T014 Create `internal/probe/manager.go` per `contracts/probe.md`: `Manager` struct + `New(rt, log)` + `Track(containerID, spec)` (idempotent — re-tracking same spec is no-op; different spec restarts goroutine) + `Untrack(containerID)` + `Snapshot(containerID) (Snapshot, bool)` + `Run(ctx)` (blocks until ctx cancels; returns when all tracked goroutines have exited). Per-replica goroutine implements R-002 (fixed interval from start, skip if in-flight) and R-003 (strict consecutive streak). Persists Snapshot via in-package `sync.Map`. Commit: `feat(probe): add per-replica probe Manager with goroutine lifecycle`.
 
-- [ ] T015 [P] Add `internal/probe/manager_test.go` using `testing/synctest` for deterministic timing: Track→3 successful probes→Snapshot.HealthOK=true; Track→retries failures→Snapshot.HealthOK=false; Track followed by Untrack within 100ms exits cleanly (verify with goroutine count); ctx cancel exits all goroutines within timeout. Commit: `test(probe): cover Manager lifecycle with synctest`.
+- [X] T015 [P] Add `internal/probe/manager_test.go` using `testing/synctest` for deterministic timing: Track→3 successful probes→Snapshot.HealthOK=true; Track→retries failures→Snapshot.HealthOK=false; Track followed by Untrack within 100ms exits cleanly (verify with goroutine count); ctx cancel exits all goroutines within timeout. Commit: `test(probe): cover Manager lifecycle with synctest`.
 
 **Checkpoint**: probe package compiles, all unit tests green; real Exec works against dockerd. Reconciler still doesn't use any of this — that's Phase 3+.
 
@@ -107,17 +107,17 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Implementation for User Story 1
 
-- [ ] T016 [US1] Create `internal/reconciler/status.go` with `Aggregate(desired int, snapshots []probe.Snapshot) types.ServiceStatus` per `data-model.md`. Pure function. Imports `pkg/types` + `internal/probe` only. Commit: `feat(reconciler): add Service status aggregator from probe snapshots`.
+- [X] T016 [US1] Create `internal/reconciler/status.go` with `Aggregate(desired int, snapshots []probe.Snapshot) types.ServiceStatus` per `data-model.md`. Pure function. Imports `pkg/types` + `internal/probe` only. Commit: `feat(reconciler): add Service status aggregator from probe snapshots`.
 
-- [ ] T017 [P] [US1] Add `internal/reconciler/status_test.go` table-driven across the matrix (healthy/degraded/failed/stopped/reconciling × varying replica counts). Pure-function test, no I/O. Commit: `test(reconciler): cover Service status aggregation matrix`.
+- [X] T017 [P] [US1] Add `internal/reconciler/status_test.go` table-driven across the matrix (healthy/degraded/failed/stopped/reconciling × varying replica counts). Pure-function test, no I/O. Commit: `test(reconciler): cover Service status aggregation matrix`.
 
-- [ ] T018 [US1] Modify `internal/reconciler/reconciler.go`: `New()` takes a `*probe.Manager`; `Run()` starts `manager.Run(ctx)` in a goroutine alongside the tick loop; `reconcileProject` after computing actions also calls `manager.Track` for each new container the diff produced and `manager.Untrack` for each removed container; computes `Aggregate(...)` for each service and writes back to `Service.Status` via `store.PutService` only if changed. Commit: `feat(reconciler): integrate probe Manager into tick loop and persist Service.Status`.
+- [X] T018 [US1] Modify `internal/reconciler/reconciler.go`: `New()` takes a `*probe.Manager`; `Run()` starts `manager.Run(ctx)` in a goroutine alongside the tick loop; `reconcileProject` after computing actions also calls `manager.Track` for each new container the diff produced and `manager.Untrack` for each removed container; computes `Aggregate(...)` for each service and writes back to `Service.Status` via `store.PutService` only if changed. Commit: `feat(reconciler): integrate probe Manager into tick loop and persist Service.Status`.
 
-- [ ] T019 [US1] Modify `internal/cli/server.go`'s `runServer` to construct the probe Manager and pass it to `reconciler.New`. Commit: `feat(cli): wire probe Manager into proxa server`.
+- [X] T019 [US1] Modify `internal/cli/server.go`'s `runServer` to construct the probe Manager and pass it to `reconciler.New`. Commit: `feat(cli): wire probe Manager into proxa server`.
 
-- [ ] T020 [US1] Modify `internal/server/handlers.go` `handleSystemStatus` and `internal/server/ui.go` `buildUIData`: prefer `svc.Status` from the store when non-empty; fall back to `deriveStatus(desired, actual)` for legacy services / first-tick race. Commit: `feat(server): use persisted Service.Status with count-derived fallback`.
+- [X] T020 [US1] Modify `internal/server/handlers.go` `handleSystemStatus` and `internal/server/ui.go` `buildUIData`: prefer `svc.Status` from the store when non-empty; fall back to `deriveStatus(desired, actual)` for legacy services / first-tick race. Commit: `feat(server): use persisted Service.Status with count-derived fallback`.
 
-- [ ] T021 [US1] Add `tests/e2e/health_test.go` (build tag `e2e`) covering SC-002-1: deploy whoami with `[health].path = "/health"`, wait one tick + grace, assert `bin/proxa ps -o json` returns `status: "healthy"`. Cleanup tears down container. Commit: `test(e2e): cover HTTP probe drives healthy status (SC-002-1)`.
+- [X] T021 [US1] Add `tests/e2e/health_test.go` (build tag `e2e`) covering SC-002-1: deploy whoami with `[health].path = "/health"`, wait one tick + grace, assert `bin/proxa ps -o json` returns `status: "healthy"`. Cleanup tears down container. Commit: `test(e2e): cover HTTP probe drives healthy status (SC-002-1)`.
 
 **Checkpoint**: SC-002-1 passes. `proxa ps` and dashboard reflect real probe outcomes. Services without `[health]` block continue to derive status from count (no regression — preserves SC-002-8).
 
