@@ -137,12 +137,95 @@ func (*StartFirst) Apply(ctx context.Context, req Request) error {
 	return nil
 }
 
-// StopFirst is a placeholder declared here so SelectStrategy resolves;
-// the real Apply lands with T031.
+// StopFirst implements the data-safe rollover for stateful services.
+// Old container is stopped + removed BEFORE the new is created — no
+// two-writers window. Probe failure on the new container does NOT roll
+// back (the old data may already be in flight); the next reconciler
+// tick decides.
 type StopFirst struct{}
 
-func (*StopFirst) Name() string                       { return string(types.StrategyStopFirst) }
-func (*StopFirst) Apply(context.Context, Request) error { return errors.New("stop-first: not implemented yet") }
+// Name returns "stop-first".
+func (*StopFirst) Name() string { return string(types.StrategyStopFirst) }
+
+// Apply executes the stop-first contract.
+func (*StopFirst) Apply(ctx context.Context, req Request) error {
+	canonicalName := dockerlabels.ContainerNameFor(req.Project, req.Service, req.ReplicaIdx)
+	log := req.Logger
+	if log == nil {
+		log = slog.Default()
+	}
+	const gracePeriod = 30 * time.Second
+
+	if req.OldID != "" {
+		if err := req.Runtime.StopContainer(ctx, req.OldID, gracePeriod); err != nil {
+			return fmt.Errorf("stop-first: stop old %s: %w", req.OldID, err)
+		}
+		if err := waitForExit(ctx, req.Runtime, req.OldID, gracePeriod+5*time.Second); err != nil {
+			log.Warn("stop-first: old never reported exited; force-removing", "oldID", req.OldID, "err", err)
+		}
+		req.Probes.Untrack(req.OldID)
+		if err := req.Runtime.RemoveContainer(ctx, req.OldID, true); err != nil {
+			return fmt.Errorf("stop-first: remove old %s: %w", req.OldID, err)
+		}
+	}
+
+	if err := req.Runtime.PullImage(ctx, req.NewSpec.Image); err != nil {
+		return fmt.Errorf("stop-first: pull %s: %w", req.NewSpec.Image, err)
+	}
+	specHash := hash.Hash(req.NewSpec)
+	newID, err := req.Runtime.CreateContainer(ctx, rt.ContainerSpec{
+		Name:      canonicalName,
+		Image:     req.NewSpec.Image,
+		Env:       req.NewSpec.Env,
+		Volumes:   req.NewSpec.Volumes,
+		Ports:     req.NewSpec.Expose,
+		Security:  req.NewSpec.Security,
+		Resources: req.NewSpec.Resources,
+		Labels: map[string]string{
+			dockerlabels.LabelProject:  req.Project,
+			dockerlabels.LabelService:  req.Service,
+			dockerlabels.LabelReplica:  fmt.Sprintf("%d", req.ReplicaIdx),
+			dockerlabels.LabelSpecHash: specHash,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("stop-first: create %s: %w", canonicalName, err)
+	}
+	if err := req.Runtime.StartContainer(ctx, newID); err != nil {
+		return fmt.Errorf("stop-first: start %s: %w", newID, err)
+	}
+	if err := req.Probes.Track(newID, req.NewSpec); err != nil {
+		log.Warn("stop-first: track failed", "newID", newID, "err", err)
+	}
+
+	if healthy := waitForFirstHealthy(ctx, req.Probes, newID, probeDeadlineFor(req.NewSpec.Health)); !healthy {
+		log.Warn("stop-first: new container never reported healthy — next tick will retry",
+			"project", req.Project, "service", req.Service, "replica", req.ReplicaIdx, "newID", newID)
+	}
+	return nil
+}
+
+// waitForExit polls Runtime.InspectContainer until the container's
+// State == "exited" or the timeout elapses.
+func waitForExit(ctx context.Context, r rt.Runtime, id string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	ticker := time.NewTicker(200 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		info, err := r.InspectContainer(ctx, id)
+		if err == nil && info != nil && info.State == "exited" {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("container %s did not exit within %s", id, timeout)
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+		}
+	}
+}
 
 // waitForFirstHealthy blocks until probe.Snapshot(id).HealthOK becomes
 // true, or the deadline elapses, or ctx cancels.
