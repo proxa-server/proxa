@@ -279,7 +279,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 - [X] T060 [US5] Add `internal/cli/ps_test.go` covering: table rendering with one project / multi-project / empty cluster, JSON output format. Use a fake `client` interface. Commit: `test(cli): cover proxa ps formatting`.
 
-- [ ] T061 [US5] Add an integration test at `tests/e2e/ps_test.go` (build-tagged `e2e`): deploy two services, `proxa ps`, parse the table, assert both rows present with correct desired/actual. Asserts SC-005. Commit: `test(e2e): cover proxa ps (SC-005)`.
+- [X] T061 [US5] Add an integration test at `tests/e2e/ps_test.go` (build-tagged `e2e`): deploy two services, `proxa ps`, parse the table, assert both rows present with correct desired/actual. Asserts SC-005. Commit: `test(e2e): cover proxa ps (SC-005)`.
 
 **Checkpoint**: SC-005 passes. All five CLI user stories independently testable.
 
