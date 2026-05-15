@@ -65,17 +65,34 @@ func (s *Server) handleSystemStatus(w http.ResponseWriter, r *http.Request) {
 			resp.Node.ContainerCount += len(containers)
 		}
 		for _, svc := range svcs {
+			actual := actualByService[svc.Name]
 			ps.Services = append(ps.Services, ServiceSummary{
 				Name:            svc.Name,
 				Image:           svc.Spec.Image,
 				DesiredReplicas: svc.Spec.Replicas,
-				ActualReplicas:  actualByService[svc.Name],
-				Status:          string(svc.Status),
+				ActualReplicas:  actual,
+				Status:          deriveStatus(svc.Spec.Replicas, actual),
 			})
 		}
 		resp.Projects = append(resp.Projects, ps)
 	}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// deriveStatus computes a service's display status from desired vs actual
+// running replica counts. Honest about what we know without inspecting
+// each replica's health (health checks land in Feature 002).
+func deriveStatus(desired, actual int) string {
+	switch {
+	case desired == 0 && actual == 0:
+		return "stopped"
+	case actual == desired:
+		return "healthy"
+	case actual < desired:
+		return "reconciling"
+	default: // actual > desired
+		return "scaling-down"
+	}
 }
 
 func (s *Server) handleListProjects(w http.ResponseWriter, r *http.Request) {

@@ -97,12 +97,13 @@ func (s *Server) buildUIData(r *http.Request) uiData {
 			out.Node.ContainerCount += len(containers)
 		}
 		for _, svc := range svcs {
+			actual := actualByService[svc.Name]
 			ps.Services = append(ps.Services, ServiceSummary{
 				Name:            svc.Name,
 				Image:           svc.Spec.Image,
 				DesiredReplicas: svc.Spec.Replicas,
-				ActualReplicas:  actualByService[svc.Name],
-				Status:          string(svc.Status),
+				ActualReplicas:  actual,
+				Status:          deriveStatus(svc.Spec.Replicas, actual),
 			})
 			out.TotalServices++
 		}

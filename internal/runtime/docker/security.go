@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/go-connections/nat"
 
 	"github.com/proxa-server/proxa/internal/runtime"
 	"github.com/proxa-server/proxa/internal/security"
@@ -22,12 +23,15 @@ import (
 func applySecurityProfile(spec runtime.ContainerSpec) (cfg *container.Config, host *container.HostConfig) {
 	prof := security.Apply(spec.Security)
 
+	exposed, bindings := portMaps(spec.Ports)
+
 	cfg = &container.Config{
-		Image:  spec.Image,
-		Env:    envSlice(spec.Env),
-		Cmd:    spec.Cmd,
-		Labels: nil, // populated by caller via BuildContainerLabels
-		User:   resolveUser(prof),
+		Image:        spec.Image,
+		Env:          envSlice(spec.Env),
+		Cmd:          spec.Cmd,
+		Labels:       nil, // populated by caller via BuildContainerLabels
+		User:         resolveUser(prof),
+		ExposedPorts: exposed,
 	}
 
 	host = &container.HostConfig{
@@ -35,9 +39,44 @@ func applySecurityProfile(spec runtime.ContainerSpec) (cfg *container.Config, ho
 		CapDrop:        prof.CapDrop,
 		ReadonlyRootfs: prof.ReadOnlyRootFS,
 		SecurityOpt:    securityOpts(prof),
+		PortBindings:   bindings,
 	}
 
 	return cfg, host
+}
+
+// portMaps converts Proxa's PortSpec list into Docker's exposed-port
+// set + host-port bindings. Proxa protocols http/https are mapped to
+// TCP at the Docker level (the L7 distinction matters for ingress,
+// not for the runtime).
+//
+// host=0 in the spec means "container-port exposed but no host
+// binding" — useful when only the ingress controller will reach the
+// container. host>0 binds the container port to the named host port.
+func portMaps(ports []runtime.PortSpecAlias) (nat.PortSet, nat.PortMap) {
+	if len(ports) == 0 {
+		return nil, nil
+	}
+	exposed := nat.PortSet{}
+	bindings := nat.PortMap{}
+	for _, p := range ports {
+		proto := p.Protocol
+		if proto == "http" || proto == "https" || proto == "" {
+			proto = "tcp"
+		}
+		key, err := nat.NewPort(proto, fmt.Sprintf("%d", p.Container))
+		if err != nil {
+			continue // skip malformed entries; validation already happened in parser
+		}
+		exposed[key] = struct{}{}
+		if p.Host > 0 {
+			bindings[key] = []nat.PortBinding{{
+				HostIP:   "0.0.0.0",
+				HostPort: fmt.Sprintf("%d", p.Host),
+			}}
+		}
+	}
+	return exposed, bindings
 }
 
 // resolveUser implements the FR-002 default: empty user + !AllowRoot
