@@ -116,7 +116,7 @@ func (r *Reconciler) reconcileProject(ctx context.Context, project string) {
 		return
 	}
 
-	actions := Compute(desired, actual)
+	actions := Compute(desired, actual, r.probeUnhealthySet(desired, actual))
 	if len(actions) > 0 {
 		r.logger.Info("reconciling", "project", project, "actions", len(actions))
 		for _, a := range actions {
@@ -138,6 +138,38 @@ func (r *Reconciler) reconcileProject(ctx context.Context, project string) {
 	}
 
 	r.updateProbesAndStatus(ctx, project, desired, actual)
+}
+
+// probeUnhealthySet returns the set of containerIDs whose probe streak
+// has hit-or-exceeded the service's configured retries. The reconciler
+// passes this to Compute so unhealthy replicas get rotated like crashed
+// ones (FR-006). Containers without a tracked probe (e.g., no [health]
+// block) never appear in the result.
+func (r *Reconciler) probeUnhealthySet(desired []types.Service, actual []rt.ContainerInfo) map[string]bool {
+	retriesByService := make(map[string]int, len(desired))
+	for _, svc := range desired {
+		retries := svc.Spec.Health.Retries
+		if retries <= 0 {
+			retries = 3
+		}
+		retriesByService[svc.Name] = retries
+	}
+	out := make(map[string]bool)
+	for _, c := range actual {
+		svcName := c.Labels[dockerlabels.LabelService]
+		retries, ok := retriesByService[svcName]
+		if !ok {
+			continue
+		}
+		snap, tracked := r.probes.Snapshot(c.ID)
+		if !tracked || snap.HealthOK {
+			continue
+		}
+		if snap.Streak >= retries {
+			out[c.ID] = true
+		}
+	}
+	return out
 }
 
 // updateProbesAndStatus tracks every active container, untracks any

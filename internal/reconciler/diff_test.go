@@ -60,7 +60,7 @@ func TestComputeNoChange(t *testing.T) {
 		mkContainer("c0", "default", "web", 0, specHash),
 		mkContainer("c1", "default", "web", 1, specHash),
 	}
-	actions := Compute([]types.Service{svc}, actual)
+	actions := Compute([]types.Service{svc}, actual, nil)
 	if len(actions) != 0 {
 		t.Errorf("expected 0 actions, got %d: %+v", len(actions), actions)
 	}
@@ -72,7 +72,7 @@ func TestComputeScaleUp(t *testing.T) {
 	actual := []rt.ContainerInfo{
 		mkContainer("c0", "default", "web", 0, specHash),
 	}
-	actions := Compute([]types.Service{svc}, actual)
+	actions := Compute([]types.Service{svc}, actual, nil)
 	creates := 0
 	for _, a := range actions {
 		if a.Type == ActionCreate {
@@ -92,7 +92,7 @@ func TestComputeScaleDown(t *testing.T) {
 		mkContainer("c1", "default", "web", 1, specHash),
 		mkContainer("c2", "default", "web", 2, specHash),
 	}
-	actions := Compute([]types.Service{svc}, actual)
+	actions := Compute([]types.Service{svc}, actual, nil)
 	removes := 0
 	for _, a := range actions {
 		if a.Type == ActionRemove {
@@ -111,7 +111,7 @@ func TestComputeSpecDrift(t *testing.T) {
 	actual := []rt.ContainerInfo{
 		mkContainer("c0", "default", "web", 0, staleHash),
 	}
-	actions := Compute([]types.Service{svc}, actual)
+	actions := Compute([]types.Service{svc}, actual, nil)
 	if len(actions) != 1 || actions[0].Type != ActionReplace {
 		t.Fatalf("expected 1 replace, got %+v", actions)
 	}
@@ -132,7 +132,7 @@ func TestComputeServiceDeleted(t *testing.T) {
 		mkContainer("c0", "default", "old-svc", 0, specHash),
 		mkContainer("c1", "default", "old-svc", 1, specHash),
 	}
-	actions := Compute(nil, actual) // no desired services
+	actions := Compute(nil, actual, nil) // no desired services
 	if len(actions) != 2 {
 		t.Errorf("expected 2 removes for deleted service, got %d", len(actions))
 	}
@@ -149,7 +149,7 @@ func TestComputeRestartsExitedContainer(t *testing.T) {
 	exited := mkContainer("dead-id", "default", "web", 0, specHash)
 	exited.State = "exited" // user did `docker kill` or container crashed
 
-	actions := Compute([]types.Service{svc}, []rt.ContainerInfo{exited})
+	actions := Compute([]types.Service{svc}, []rt.ContainerInfo{exited}, nil)
 
 	// Expect a Remove for the dead container AND a Create for the freed slot.
 	gotRemove := false
@@ -170,7 +170,7 @@ func TestComputeRestartsExitedContainer(t *testing.T) {
 func TestComputeMultiProjectIndependence(t *testing.T) {
 	socio := mkSvc("socio-do", "web", "nginx:alpine", 1)
 	kut := mkSvc("kut-do", "web", "nginx:alpine", 1)
-	actions := Compute([]types.Service{socio, kut}, nil)
+	actions := Compute([]types.Service{socio, kut}, nil, nil)
 	if len(actions) != 2 {
 		t.Fatalf("expected 2 creates (one per project), got %d", len(actions))
 	}
@@ -188,8 +188,8 @@ func TestComputeDeterministicOrdering(t *testing.T) {
 		mkSvc("kut-do", "web", "nginx:alpine", 1),
 		mkSvc("socio-do", "api", "nginx:alpine", 2),
 	}
-	a1 := Compute(svcs, nil)
-	a2 := Compute(svcs, nil)
+	a1 := Compute(svcs, nil, nil)
+	a2 := Compute(svcs, nil, nil)
 	if len(a1) != len(a2) {
 		t.Fatalf("length mismatch")
 	}
