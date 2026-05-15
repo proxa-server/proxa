@@ -46,10 +46,16 @@ type Action struct {
 // (services from StateStore) + actual state (containers from Runtime).
 // Output: ordered list of actions to execute. Deterministic ordering by
 // (project, service, replica).
+//
+// Containers in non-active states (exited, dead, removing) are
+// scheduled for Remove and excluded from the actual map — that frees
+// the replica slot so the desired-side loop generates a Create. This
+// is how the reconciler restores a killed/crashed container.
 func Compute(desired []types.Service, actual []rt.ContainerInfo) []Action {
-	// Index actual containers by (project, service, replica).
 	type key struct{ project, service string; replica int }
 	actualMap := map[key]rt.ContainerInfo{}
+	var actions []Action
+
 	for _, c := range actual {
 		p := c.Labels[dockerlabels.LabelProject]
 		s := c.Labels[dockerlabels.LabelService]
@@ -57,7 +63,21 @@ func Compute(desired []types.Service, actual []rt.ContainerInfo) []Action {
 		if err != nil {
 			continue // skip non-conforming containers
 		}
-		actualMap[key{p, s, r}] = c
+		// Active states retain the slot. Anything else (exited/dead/
+		// removing/paused) is dead-from-our-perspective and needs to
+		// be removed so the slot can be re-created.
+		if isActive(c.State) {
+			actualMap[key{p, s, r}] = c
+		} else {
+			actions = append(actions, Action{
+				Type:        ActionRemove,
+				Project:     p,
+				Service:     s,
+				Replica:     r,
+				ContainerID: c.ID,
+				Reason:      "container in non-running state: " + c.State,
+			})
+		}
 	}
 
 	// Build desired set + per-service spec hash.
@@ -68,8 +88,6 @@ func Compute(desired []types.Service, actual []rt.ContainerInfo) []Action {
 			desiredSet[desiredKey{svc.Project, svc.Name, r}] = svc
 		}
 	}
-
-	var actions []Action
 
 	// Pass 1: handle desired entries — create or replace.
 	for k, svc := range desiredSet {
@@ -128,4 +146,15 @@ func Compute(desired []types.Service, actual []rt.ContainerInfo) []Action {
 	})
 
 	return actions
+}
+
+// isActive reports whether a container in the given Docker state is
+// counted as fulfilling its replica slot. Exited/dead/removing/paused
+// containers are NOT active — the reconciler removes them and recreates.
+func isActive(state string) bool {
+	switch state {
+	case "running", "restarting", "created":
+		return true
+	}
+	return false
 }

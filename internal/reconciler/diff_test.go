@@ -143,6 +143,30 @@ func TestComputeServiceDeleted(t *testing.T) {
 	}
 }
 
+func TestComputeRestartsExitedContainer(t *testing.T) {
+	svc := mkSvc("default", "web", "nginx:alpine", 1)
+	specHash := hash.Hash(svc.Spec)
+	exited := mkContainer("dead-id", "default", "web", 0, specHash)
+	exited.State = "exited" // user did `docker kill` or container crashed
+
+	actions := Compute([]types.Service{svc}, []rt.ContainerInfo{exited})
+
+	// Expect a Remove for the dead container AND a Create for the freed slot.
+	gotRemove := false
+	gotCreate := false
+	for _, a := range actions {
+		if a.Type == ActionRemove && a.ContainerID == "dead-id" {
+			gotRemove = true
+		}
+		if a.Type == ActionCreate && a.Replica == 0 {
+			gotCreate = true
+		}
+	}
+	if !gotRemove || !gotCreate {
+		t.Errorf("expected Remove(dead-id) + Create(replica=0), got %+v", actions)
+	}
+}
+
 func TestComputeMultiProjectIndependence(t *testing.T) {
 	socio := mkSvc("socio-do", "web", "nginx:alpine", 1)
 	kut := mkSvc("kut-do", "web", "nginx:alpine", 1)
