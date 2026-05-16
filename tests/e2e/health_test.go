@@ -21,6 +21,7 @@ func TestSC_002_1_HTTPProbeMarksHealthy(t *testing.T) {
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
+	skipIfHTTPProbeUnreachable(t)
 
 	dir := t.TempDir()
 	if out, err := runProxa(t, dir, "init"); err != nil {
@@ -81,6 +82,26 @@ retries  = 3
 
 	out, _ := runProxa(t, dir, "ps", "-j")
 	t.Fatalf("healthsvc never reached healthy within 30s; last ps -j output:\n%s", out)
+}
+
+// waitForServiceStatus polls `proxa ps -j` until the named service shows
+// the wanted status, or the deadline passes. Returns true on success.
+func waitForServiceStatus(t *testing.T, dir, service, want string, timeout time.Duration) bool {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		out, err := runProxa(t, dir, "ps", "-j")
+		if err == nil {
+			var doc map[string]any
+			if json.Unmarshal([]byte(out), &doc) == nil {
+				if findServiceStatus(doc, service) == want {
+					return true
+				}
+			}
+		}
+		time.Sleep(1 * time.Second)
+	}
+	return false
 }
 
 // findServiceStatus walks the SystemStatus JSON tree for the named service.
