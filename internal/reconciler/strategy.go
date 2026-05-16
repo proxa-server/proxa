@@ -234,7 +234,12 @@ func waitForFirstHealthy(ctx context.Context, probes *probe.Manager, id string, 
 	ticker := time.NewTicker(200 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		if snap, ok := probes.Snapshot(id); ok && snap.HealthOK && !snap.LastProbeAt.IsZero() {
+		// HealthOK=true covers both cases: a probe explicitly reported
+		// healthy, OR the service has no [health] block (Manager.Track
+		// stores a trusted-healthy snapshot synchronously). The
+		// HealthOK=false initial value for probed services is set in
+		// Track, so we won't mistake "pending first probe" for healthy.
+		if snap, ok := probes.Snapshot(id); ok && snap.HealthOK {
 			return true
 		}
 		if time.Now().After(deadline) {
