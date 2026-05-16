@@ -21,6 +21,7 @@ func TestSC_002_2_FailedProbeRestartCycle(t *testing.T) {
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
+	skipIfHTTPProbeUnreachable(t)
 
 	dir := t.TempDir()
 	if out, err := runProxa(t, dir, "init"); err != nil {
