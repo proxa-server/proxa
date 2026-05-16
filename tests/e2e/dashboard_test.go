@@ -44,7 +44,7 @@ func TestSC_008_DashboardRendersServices(t *testing.T) {
 			"proxa-default-dashtest-0", "proxa-default-dashtest-1").Run()
 	})
 
-	body := getViaUnixSocket(t, filepath.Join(dir, "proxa.sock"), "/ui/")
+	body := getViaUnixSocket(t, socketPath(t, dir), "/ui/")
 	for _, want := range []string{"<title>Proxa", "dashtest", "traefik/whoami:latest"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("dashboard HTML missing %q\n--- snippet ---\n%s", want, snippet(body, 400))
@@ -52,7 +52,7 @@ func TestSC_008_DashboardRendersServices(t *testing.T) {
 	}
 
 	// Fragment endpoint that HTMX polls.
-	frag := getViaUnixSocket(t, filepath.Join(dir, "proxa.sock"), "/ui/services")
+	frag := getViaUnixSocket(t, socketPath(t, dir), "/ui/services")
 	if !strings.Contains(frag, "dashtest") {
 		t.Errorf("services fragment missing dashtest")
 	}

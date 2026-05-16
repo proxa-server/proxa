@@ -80,7 +80,7 @@ func createProjectViaCurl(t *testing.T, dir, name string) {
 		t.Fatalf("read token: %v", err)
 	}
 	token := strings.TrimSpace(string(tokenBytes))
-	sock := filepath.Join(dir, "proxa.sock")
+	sock := socketPath(t, dir)
 
 	cmd := exec.Command("curl", "-sS", "--unix-socket", sock,
 		"-H", "Authorization: Bearer "+token,
