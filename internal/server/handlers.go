@@ -71,7 +71,7 @@ func (s *Server) handleSystemStatus(w http.ResponseWriter, r *http.Request) {
 				Image:           svc.Spec.Image,
 				DesiredReplicas: svc.Spec.Replicas,
 				ActualReplicas:  actual,
-				Status:          deriveStatus(svc.Spec.Replicas, actual),
+				Status:          serviceStatus(svc, actual),
 			})
 		}
 		resp.Projects = append(resp.Projects, ps)
@@ -79,9 +79,20 @@ func (s *Server) handleSystemStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// serviceStatus prefers the persisted Service.Status (written by the
+// reconciler from probe Snapshots) and falls back to a count-derived
+// status when the reconciler hasn't populated it yet (first tick / pre-002
+// services). Keeping the fallback means the dashboard stays useful even
+// when probes are disabled.
+func serviceStatus(svc types.Service, actual int) string {
+	if svc.Status != "" {
+		return string(svc.Status)
+	}
+	return deriveStatus(svc.Spec.Replicas, actual)
+}
+
 // deriveStatus computes a service's display status from desired vs actual
-// running replica counts. Honest about what we know without inspecting
-// each replica's health (health checks land in Feature 002).
+// running replica counts. Used only when persisted Status is empty.
 func deriveStatus(desired, actual int) string {
 	switch {
 	case desired == 0 && actual == 0:

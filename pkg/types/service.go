@@ -17,6 +17,13 @@ type Service struct {
 }
 
 // ServiceStatus is the aggregate health derived from replica states.
+// Values:
+//   - pending     : service just upserted, reconciler hasn't ticked yet
+//   - reconciling : actual replicas != desired (mid-rollover)
+//   - healthy     : actual == desired AND every replica's probe passes
+//   - degraded    : actual == desired BUT at least one probe is failing
+//   - failed      : actual < desired AND no healthy replicas (image broken?)
+//   - stopped     : desired == 0 AND actual == 0 (proxa down)
 type ServiceStatus string
 
 const (
@@ -25,6 +32,7 @@ const (
 	ServiceStatusHealthy     ServiceStatus = "healthy"
 	ServiceStatusDegraded    ServiceStatus = "degraded"
 	ServiceStatusFailed      ServiceStatus = "failed"
+	ServiceStatusStopped     ServiceStatus = "stopped"
 )
 
 // ReplicaState is one container's runtime state, as observed by the

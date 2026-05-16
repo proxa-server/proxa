@@ -36,6 +36,10 @@ func TestParseInvalid(t *testing.T) {
 		{"invalid-missing-image.toml", "invalid-image-ref"},
 		{"invalid-bad-name.toml", "missing-or-invalid-name"},
 		{"invalid-bad-protocol.toml", "invalid-protocol"},
+		{"invalid-health-mutual.toml", "health-mutually-exclusive"},
+		{"invalid-health-needs-port.toml", "health-probe-needs-port"},
+		{"invalid-health-timeout-too-big.toml", "health-timeout-out-of-range"},
+		{"invalid-health-bad-retries.toml", "health-retries-out-of-range"},
 	}
 
 	for _, tt := range tests {

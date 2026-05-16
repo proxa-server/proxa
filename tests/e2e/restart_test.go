@@ -24,7 +24,9 @@ func TestSC_002_ReconcilerRestartsKilledContainer(t *testing.T) {
 	defer stop()
 
 	tomlPath := filepath.Join(dir, "web.toml")
-	if err := os.WriteFile(tomlPath, []byte("name = \"web\"\nimage = \"nginx:alpine\"\nreplicas = 1\n"), 0o600); err != nil {
+	// traefik/whoami runs cleanly under our non-root security profile
+	// (nginx:alpine can't write /var/cache/nginx and exits immediately).
+	if err := os.WriteFile(tomlPath, []byte("name = \"web\"\nimage = \"traefik/whoami:latest\"\nreplicas = 1\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {

@@ -1,0 +1,11 @@
+name  = "x"
+image = "nginx:alpine"
+
+[[expose]]
+container = 80
+host      = 0
+protocol  = "http"
+
+[health]
+path    = "/healthz"
+retries = 999

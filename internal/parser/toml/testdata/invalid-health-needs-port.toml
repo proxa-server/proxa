@@ -1,0 +1,5 @@
+name  = "x"
+image = "nginx:alpine"
+
+[health]
+path = "/healthz"

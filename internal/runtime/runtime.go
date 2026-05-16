@@ -41,6 +41,7 @@ type Runtime interface {
 	StartContainer(ctx context.Context, id string) error
 	StopContainer(ctx context.Context, id string, gracePeriod time.Duration) error
 	RemoveContainer(ctx context.Context, id string, force bool) error
+	RenameContainer(ctx context.Context, id, newName string) error
 	InspectContainer(ctx context.Context, id string) (*ContainerInfo, error)
 	ListContainers(ctx context.Context, filter ListFilter) ([]ContainerInfo, error)
 
@@ -80,12 +81,13 @@ type ImageInfo struct {
 
 // ContainerInfo describes a container known to the runtime.
 type ContainerInfo struct {
-	ID     string
-	Name   string
-	Image  string
-	State  string // created | running | exited | paused | ...
-	Health string // healthy | unhealthy | starting | none
-	Labels map[string]string
+	ID        string
+	Name      string
+	Image     string
+	State     string // created | running | exited | paused | ...
+	Health    string // healthy | unhealthy | starting | none
+	IPAddress string // bridge-network IPv4 if connected; empty otherwise (populated by InspectContainer)
+	Labels    map[string]string
 }
 
 // ListFilter scopes a ListContainers call. Project is required.
@@ -147,6 +149,7 @@ func (noopRuntime) CreateContainer(context.Context, ContainerSpec) (string, erro
 func (noopRuntime) StartContainer(context.Context, string) error                       { return ErrNotImplemented }
 func (noopRuntime) StopContainer(context.Context, string, time.Duration) error         { return ErrNotImplemented }
 func (noopRuntime) RemoveContainer(context.Context, string, bool) error                { return ErrNotImplemented }
+func (noopRuntime) RenameContainer(context.Context, string, string) error              { return ErrNotImplemented }
 func (noopRuntime) InspectContainer(context.Context, string) (*ContainerInfo, error)   { return nil, ErrNotImplemented }
 func (noopRuntime) ListContainers(context.Context, ListFilter) ([]ContainerInfo, error) {
 	return nil, ErrNotImplemented

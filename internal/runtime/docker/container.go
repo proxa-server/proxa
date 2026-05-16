@@ -23,6 +23,7 @@ type containerClient interface {
 	ContainerStart(ctx context.Context, id string, options container.StartOptions) error
 	ContainerStop(ctx context.Context, id string, options container.StopOptions) error
 	ContainerRemove(ctx context.Context, id string, options container.RemoveOptions) error
+	ContainerRename(ctx context.Context, id, newName string) error
 	ContainerInspect(ctx context.Context, id string) (container.InspectResponse, error)
 	ContainerList(ctx context.Context, options container.ListOptions) ([]container.Summary, error)
 }
@@ -75,6 +76,18 @@ func (r *Runtime) RemoveContainer(ctx context.Context, id string, force bool) er
 	return nil
 }
 
+// RenameContainer changes a container's name. The new name must be
+// unique in the daemon's namespace; callers handle collisions.
+func (r *Runtime) RenameContainer(ctx context.Context, id, newName string) error {
+	if id == "" || newName == "" {
+		return fmt.Errorf("runtime/docker: rename: id and newName required")
+	}
+	if err := r.cli.ContainerRename(ctx, id, newName); err != nil {
+		return fmt.Errorf("runtime/docker: rename %q -> %q: %w", id, newName, err)
+	}
+	return nil
+}
+
 // InspectContainer returns metadata about a container by ID or name.
 func (r *Runtime) InspectContainer(ctx context.Context, id string) (*runtime.ContainerInfo, error) {
 	resp, err := r.cli.ContainerInspect(ctx, id)
@@ -90,6 +103,20 @@ func (r *Runtime) InspectContainer(ctx context.Context, id string) (*runtime.Con
 	}
 	if resp.State.Health != nil {
 		info.Health = resp.State.Health.Status
+	}
+	// Resolve the container's bridge-network IPv4 for HTTP probes (R-001).
+	// Prefer the "bridge" network; fall back to the first non-empty IP.
+	if resp.NetworkSettings != nil {
+		if ep, ok := resp.NetworkSettings.Networks["bridge"]; ok && ep != nil && ep.IPAddress != "" {
+			info.IPAddress = ep.IPAddress
+		} else {
+			for _, ep := range resp.NetworkSettings.Networks {
+				if ep != nil && ep.IPAddress != "" {
+					info.IPAddress = ep.IPAddress
+					break
+				}
+			}
+		}
 	}
 	return info, nil
 }

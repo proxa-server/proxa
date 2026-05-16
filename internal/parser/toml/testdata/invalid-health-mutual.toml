@@ -1,0 +1,6 @@
+name  = "x"
+image = "nginx:alpine"
+
+[health]
+path    = "/healthz"
+command = ["pg_isready"]

@@ -43,15 +43,18 @@ type Action struct {
 }
 
 // Compute is the pure diff function. Input: snapshot of desired state
-// (services from StateStore) + actual state (containers from Runtime).
-// Output: ordered list of actions to execute. Deterministic ordering by
-// (project, service, replica).
+// (services from StateStore) + actual state (containers from Runtime)
+// + optional probeUnhealthy set (containerIDs whose probe streak has
+// hit retries; nil means "no probe input"). Output: ordered list of
+// actions to execute. Deterministic ordering by (project, service, replica).
 //
-// Containers in non-active states (exited, dead, removing) are
-// scheduled for Remove and excluded from the actual map — that frees
-// the replica slot so the desired-side loop generates a Create. This
-// is how the reconciler restores a killed/crashed container.
-func Compute(desired []types.Service, actual []rt.ContainerInfo) []Action {
+// Removal triggers (symmetric — both free the replica slot so the
+// desired-side loop generates a fresh Create):
+//   - Container in a non-active state (exited / dead / removing / paused)
+//     — handles the killed/crashed container case from 001.
+//   - Container is probe-unhealthy past its retry budget — handles the
+//     workload-stopped-responding case from 002 (FR-006).
+func Compute(desired []types.Service, actual []rt.ContainerInfo, probeUnhealthy map[string]bool) []Action {
 	type key struct{ project, service string; replica int }
 	actualMap := map[key]rt.ContainerInfo{}
 	var actions []Action
@@ -63,21 +66,24 @@ func Compute(desired []types.Service, actual []rt.ContainerInfo) []Action {
 		if err != nil {
 			continue // skip non-conforming containers
 		}
-		// Active states retain the slot. Anything else (exited/dead/
-		// removing/paused) is dead-from-our-perspective and needs to
-		// be removed so the slot can be re-created.
-		if isActive(c.State) {
+		dead := !isActive(c.State)
+		unhealthy := probeUnhealthy[c.ID]
+		if !dead && !unhealthy {
 			actualMap[key{p, s, r}] = c
-		} else {
-			actions = append(actions, Action{
-				Type:        ActionRemove,
-				Project:     p,
-				Service:     s,
-				Replica:     r,
-				ContainerID: c.ID,
-				Reason:      "container in non-running state: " + c.State,
-			})
+			continue
 		}
+		reason := "container in non-running state: " + c.State
+		if !dead && unhealthy {
+			reason = "probe streak exceeded retries"
+		}
+		actions = append(actions, Action{
+			Type:        ActionRemove,
+			Project:     p,
+			Service:     s,
+			Replica:     r,
+			ContainerID: c.ID,
+			Reason:      reason,
+		})
 	}
 
 	// Build desired set + per-service spec hash.

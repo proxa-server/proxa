@@ -1,10 +1,13 @@
 package docker
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
+	"net"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -24,6 +27,20 @@ type mockDockerClient struct {
 	listResponse   []container.Summary
 	listCalls      []container.ListOptions
 	startCalledFor []string
+
+	// exec wiring (used by exec_test.go)
+	execCreateCalls  []mockExecCreateCall
+	execAttachResp   string // bytes the mock streams back (TTY-mode plain)
+	execAttachStdout string // stdout half for multiplexed mode
+	execAttachStderr string // stderr half for multiplexed mode
+	execAttachErr    error
+	execInspectExit  int
+	execInspectErr   error
+}
+
+type mockExecCreateCall struct {
+	containerID string
+	opts        container.ExecOptions
 }
 
 type mockCreateCall struct {
@@ -44,6 +61,7 @@ func (m *mockDockerClient) ContainerStart(ctx context.Context, id string, opts c
 }
 func (m *mockDockerClient) ContainerStop(context.Context, string, container.StopOptions) error { return nil }
 func (m *mockDockerClient) ContainerRemove(context.Context, string, container.RemoveOptions) error { return nil }
+func (m *mockDockerClient) ContainerRename(context.Context, string, string) error { return nil }
 func (m *mockDockerClient) ContainerInspect(context.Context, string) (container.InspectResponse, error) {
 	return container.InspectResponse{}, errors.New("not implemented in mock")
 }
@@ -62,6 +80,69 @@ func (m *mockDockerClient) ServerVersion(context.Context) (types.Version, error)
 }
 func (m *mockDockerClient) Info(context.Context) (system.Info, error) { return system.Info{}, nil }
 func (m *mockDockerClient) Close() error                              { return nil }
+
+func (m *mockDockerClient) ContainerExecCreate(_ context.Context, id string, opts container.ExecOptions) (container.ExecCreateResponse, error) {
+	m.execCreateCalls = append(m.execCreateCalls, mockExecCreateCall{containerID: id, opts: opts})
+	return container.ExecCreateResponse{ID: "exec-" + id}, nil
+}
+
+func (m *mockDockerClient) ContainerExecAttach(_ context.Context, _ string, opts container.ExecAttachOptions) (types.HijackedResponse, error) {
+	if m.execAttachErr != nil {
+		return types.HijackedResponse{}, m.execAttachErr
+	}
+	// Build a stream the runtime will demultiplex. In multiplexed mode
+	// we need stdcopy framing; in TTY mode raw bytes.
+	var payload []byte
+	if opts.Tty {
+		payload = []byte(m.execAttachResp)
+	} else {
+		payload = appendStdcopyFrame(nil, 1, []byte(m.execAttachStdout))
+		payload = appendStdcopyFrame(payload, 2, []byte(m.execAttachStderr))
+	}
+	hr := types.NewHijackedResponse(&fakeHijackConn{r: bytes.NewReader(payload)}, "")
+	return hr, nil
+}
+
+func (m *mockDockerClient) ContainerExecInspect(context.Context, string) (container.ExecInspect, error) {
+	if m.execInspectErr != nil {
+		return container.ExecInspect{}, m.execInspectErr
+	}
+	return container.ExecInspect{ExitCode: m.execInspectExit, Running: false}, nil
+}
+
+// appendStdcopyFrame adds one frame in the format expected by
+// pkg/stdcopy.StdCopy: 8-byte header (stream, 0, 0, 0, big-endian len)
+// followed by `data`. stream=1 → stdout, 2 → stderr.
+func appendStdcopyFrame(buf []byte, stream byte, data []byte) []byte {
+	hdr := [8]byte{stream, 0, 0, 0, 0, 0, 0, 0}
+	hdr[4] = byte(len(data) >> 24)
+	hdr[5] = byte(len(data) >> 16)
+	hdr[6] = byte(len(data) >> 8)
+	hdr[7] = byte(len(data))
+	buf = append(buf, hdr[:]...)
+	buf = append(buf, data...)
+	return buf
+}
+
+// fakeHijackConn is the minimal net.Conn that types.HijackedResponse
+// needs for a one-shot read.
+type fakeHijackConn struct {
+	r io.Reader
+}
+
+func (c *fakeHijackConn) Read(p []byte) (int, error)       { return c.r.Read(p) }
+func (c *fakeHijackConn) Write(p []byte) (int, error)      { return len(p), nil }
+func (c *fakeHijackConn) Close() error                     { return nil }
+func (c *fakeHijackConn) LocalAddr() net.Addr              { return fakeAddr{} }
+func (c *fakeHijackConn) RemoteAddr() net.Addr             { return fakeAddr{} }
+func (c *fakeHijackConn) SetDeadline(t time.Time) error    { return nil }
+func (c *fakeHijackConn) SetReadDeadline(time.Time) error  { return nil }
+func (c *fakeHijackConn) SetWriteDeadline(time.Time) error { return nil }
+
+type fakeAddr struct{}
+
+func (fakeAddr) Network() string { return "fake" }
+func (fakeAddr) String() string  { return "fake" }
 
 type emptyReader struct{}
 

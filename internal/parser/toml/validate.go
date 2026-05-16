@@ -8,6 +8,8 @@ import (
 	"github.com/proxa-server/proxa/pkg/types"
 )
 
+var _ = types.TaskDef{} // keep types import explicit even if the per-func references vary
+
 // Each error code below is stable and matches contracts/toml-grammar.md.
 type validationError struct {
 	Code    string
@@ -84,8 +86,55 @@ func Validate(td types.TaskDef) error {
 	if td.Resources.Memory != "" && !memoryRe.MatchString(td.Resources.Memory) {
 		return &validationError{Code: "invalid-resource", Message: fmt.Sprintf("resources.memory %q must match ^\\d+(Ki|Mi|Gi)?$", td.Resources.Memory)}
 	}
+	if err := validateHealth(td); err != nil {
+		return err
+	}
 	// schedule cron validation is shallow in v0.0 — accept any non-empty string;
 	// full cron parser arrives with the scheduler in Feature 002.
+	return nil
+}
+
+// validateHealth enforces the [health] block rules per
+// specs/002-health-checks/data-model.md:
+//   - path and command are mutually exclusive
+//   - if path set, a port must be resolvable (from health.port OR first expose)
+//   - timeout must be > 0 and <= interval (when both present)
+//   - retries must be 1..100 (when present; 0 means "use default")
+func validateHealth(td types.TaskDef) error {
+	h := td.Health
+	hasPath := h.Path != ""
+	hasCommand := len(h.Command) > 0
+
+	if hasPath && hasCommand {
+		return &validationError{
+			Code:    "health-mutually-exclusive",
+			Message: "health.path and health.command are mutually exclusive",
+		}
+	}
+	if hasPath {
+		port := h.Port
+		if port == 0 && len(td.Expose) > 0 {
+			port = td.Expose[0].Container
+		}
+		if port == 0 {
+			return &validationError{
+				Code:    "health-probe-needs-port",
+				Message: "health.path set but no port resolvable (set health.port or declare at least one [[expose]])",
+			}
+		}
+	}
+	if h.Timeout > 0 && h.Interval > 0 && h.Timeout > h.Interval {
+		return &validationError{
+			Code:    "health-timeout-out-of-range",
+			Message: fmt.Sprintf("health.timeout %s must be <= health.interval %s", h.Timeout, h.Interval),
+		}
+	}
+	if h.Retries < 0 || h.Retries > 100 {
+		return &validationError{
+			Code:    "health-retries-out-of-range",
+			Message: fmt.Sprintf("health.retries %d must be in 1..100 (or 0 for default)", h.Retries),
+		}
+	}
 	return nil
 }
 

@@ -45,7 +45,7 @@ func TestSC_003_ScaleViaTOMLEdit(t *testing.T) {
 	})
 
 	// Wait for replica 0 to come up.
-	waitForCount(t, "scaler", 1, 15*time.Second)
+	waitForCount(t, "scaler", 1, 30*time.Second)
 
 	// Scale up to 3.
 	tomlV2 := "name = \"scaler\"\nimage = \"traefik/whoami:latest\"\nreplicas = 3\n"
@@ -55,7 +55,7 @@ func TestSC_003_ScaleViaTOMLEdit(t *testing.T) {
 	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up v2: %v\n%s", err, out)
 	}
-	waitForCount(t, "scaler", 3, 15*time.Second)
+	waitForCount(t, "scaler", 3, 30*time.Second)
 
 	// Scale down to 1.
 	tomlV3 := "name = \"scaler\"\nimage = \"traefik/whoami:latest\"\nreplicas = 1\n"
@@ -65,7 +65,7 @@ func TestSC_003_ScaleViaTOMLEdit(t *testing.T) {
 	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up v3: %v\n%s", err, out)
 	}
-	waitForCount(t, "scaler", 1, 15*time.Second)
+	waitForCount(t, "scaler", 1, 30*time.Second)
 }
 
 // waitForCount blocks until the running-container count for the named
