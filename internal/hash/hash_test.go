@@ -54,9 +54,17 @@ func TestHashChangesOnFieldChange(t *testing.T) {
 			wantSame: false,
 		},
 		{
-			name:     "replicas change",
+			// Replicas is deployment-scale, not per-container config:
+			// scaling 1→5 must NOT trigger a rolling replace of the
+			// existing replicas. See Hash() doc for the full exclusion list.
+			name:     "replicas change is ignored",
 			mutate:   func(t *types.TaskDef) { t.Replicas = 5 },
-			wantSame: false,
+			wantSame: true,
+		},
+		{
+			name:     "strategy change is ignored",
+			mutate:   func(t *types.TaskDef) { t.Strategy = types.StrategyStopFirst },
+			wantSame: true,
 		},
 		{
 			name:     "env value change",
