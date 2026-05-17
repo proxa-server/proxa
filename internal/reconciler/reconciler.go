@@ -285,41 +285,60 @@ func (r *Reconciler) updateProbesAndStatus(ctx context.Context, project string, 
 	}
 }
 
-// pushBackends builds the Backend list for one service from its
-// container IDs (already validated by the snapshot pass above) and
-// publishes it to the ingress.
+// pushBackends builds the Backend list for one service and publishes
+// it to the ingress.
+//
+// Reachability resolution per replica:
+//   - If the spec's first [[expose]] declares host > 0, the ingress
+//     dials 127.0.0.1:<hostPort>. Works on Docker Desktop (macOS /
+//     Windows) where the bridge subnet is unreachable from the host.
+//   - Otherwise the ingress dials the container's bridge IP. Required
+//     for multi-replica services on Linux (only one container can bind
+//     a host port at a time).
 func (r *Reconciler) pushBackends(ctx context.Context, project string, svc types.Service, ids []string) {
-	port := backendPort(svc.Spec)
+	ip, port := backendDial(svc.Spec)
 	backends := make([]ingress.Backend, 0, len(ids))
 	for _, id := range ids {
-		info, err := r.runtime.InspectContainer(ctx, id)
-		if err != nil || info == nil || info.IPAddress == "" {
-			continue // unreachable replica; skip
-		}
 		snap, _ := r.probes.Snapshot(id)
-		backends = append(backends, ingress.Backend{
+		b := ingress.Backend{
 			ContainerID: id,
-			IPAddress:   info.IPAddress,
 			Port:        port,
 			Healthy:     snap.HealthOK,
-		})
+		}
+		if ip != "" {
+			// Shortcut: host-port dial.
+			b.IPAddress = ip
+		} else {
+			info, err := r.runtime.InspectContainer(ctx, id)
+			if err != nil || info == nil || info.IPAddress == "" {
+				continue // unreachable replica; skip
+			}
+			b.IPAddress = info.IPAddress
+		}
+		backends = append(backends, b)
 	}
 	r.ingress.UpdateBackends(ctx, ingress.ServiceID{Project: project, Service: svc.Name}, backends)
 }
 
-// backendPort picks the container-side port the ingress will dial.
-// Preference order:
-//   1. spec.Health.Port (explicit health port)
-//   2. first spec.Expose entry's Container port
-//   3. 80 (HTTP default)
-func backendPort(spec types.TaskDef) int {
-	if spec.Health.Port > 0 {
-		return spec.Health.Port
+// backendDial returns (ip, port) for the ingress to dial when routing
+// to a replica of spec. Empty ip means "use the container's bridge IP".
+//
+//	(ip, port) = ("127.0.0.1", expose[0].Host)  when first expose has host > 0
+//	(ip, port) = ("", containerPort)            otherwise (bridge IP at dial time)
+//
+// containerPort is, in order: spec.Health.Port → spec.Expose[0].Container → 80.
+func backendDial(spec types.TaskDef) (string, int) {
+	containerPort := 80
+	switch {
+	case spec.Health.Port > 0:
+		containerPort = spec.Health.Port
+	case len(spec.Expose) > 0 && spec.Expose[0].Container > 0:
+		containerPort = spec.Expose[0].Container
 	}
-	if len(spec.Expose) > 0 && spec.Expose[0].Container > 0 {
-		return spec.Expose[0].Container
+	if len(spec.Expose) > 0 && spec.Expose[0].Host > 0 {
+		return "127.0.0.1", spec.Expose[0].Host
 	}
-	return 80
+	return "", containerPort
 }
 
 // _ keeps types reachable for future test helpers.
