@@ -94,9 +94,10 @@ func (r *Reconciler) Run(ctx context.Context) {
 }
 
 // reconcileOnce performs one full reconciliation pass across every
-// project. Errors are logged per-project and per-action. After the
-// per-project work completes, the full route table is pushed to the
-// ingress as an atomic snapshot (FR-009 + R-003).
+// project. Routes are pushed BEFORE per-project work so any probe that
+// opts into via=ingress has the route table available on its first
+// attempt (FR-010 + SC-007). Backends are pushed inside reconcileProject
+// before probe Track, same reason.
 func (r *Reconciler) reconcileOnce(ctx context.Context) {
 	projects, err := r.store.ListProjects(ctx)
 	if err != nil {
@@ -104,12 +105,12 @@ func (r *Reconciler) reconcileOnce(ctx context.Context) {
 		return
 	}
 
-	for _, p := range projects {
-		r.reconcileProject(ctx, p.Name)
-	}
-
 	if r.ingress != nil {
 		r.pushRoutes(ctx, projects)
+	}
+
+	for _, p := range projects {
+		r.reconcileProject(ctx, p.Name)
 	}
 }
 
@@ -218,6 +219,8 @@ func (r *Reconciler) updateProbesAndStatus(ctx context.Context, project string, 
 	idsByService := make(map[string][]string, len(desired))
 	activeIDs := make(map[string]struct{}, len(actual))
 
+	// Pass 1: collect IDs per service. NO Track yet — we want backends
+	// pushed to ingress first so probe-via-ingress works on first hit.
 	for _, c := range actual {
 		if !isActive(c.State) {
 			continue
@@ -227,16 +230,37 @@ func (r *Reconciler) updateProbesAndStatus(ctx context.Context, project string, 
 		if p != project {
 			continue
 		}
-		spec, ok := specByService[s]
-		if !ok {
+		if _, ok := specByService[s]; !ok {
 			continue // container belongs to a deleted service; let the next tick remove it
-		}
-		if err := r.probes.Track(c.ID, spec); err != nil {
-			r.logger.Warn("probe track failed", "container", c.ID, "err", err)
-			continue
 		}
 		idsByService[s] = append(idsByService[s], c.ID)
 		activeIDs[c.ID] = struct{}{}
+	}
+
+	// Pass 2: push backends to ingress for every service that has
+	// routes (must happen BEFORE probe Track for FR-010 / SC-007).
+	if r.ingress != nil {
+		for _, svc := range desired {
+			if len(svc.Spec.Routes) == 0 {
+				continue
+			}
+			r.pushBackends(ctx, project, svc, idsByService[svc.Name])
+		}
+	}
+
+	// Pass 3: Track probes (now safe — ingress has routes + backends).
+	for _, c := range actual {
+		if !isActive(c.State) {
+			continue
+		}
+		s := c.Labels[dockerlabels.LabelService]
+		spec, ok := specByService[s]
+		if !ok {
+			continue
+		}
+		if err := r.probes.Track(c.ID, spec); err != nil {
+			r.logger.Warn("probe track failed", "container", c.ID, "err", err)
+		}
 	}
 
 	// Untrack any container that has disappeared from THIS project.
@@ -259,7 +283,7 @@ func (r *Reconciler) updateProbesAndStatus(ctx context.Context, project string, 
 		}
 	}
 
-	// Aggregate + persist Service.Status when it changed + push backends to ingress.
+	// Pass 4: aggregate + persist Service.Status when it changed.
 	for _, svc := range desired {
 		ids := idsByService[svc.Name]
 		snaps := make([]probe.Snapshot, 0, len(ids))
@@ -276,11 +300,6 @@ func (r *Reconciler) updateProbesAndStatus(ctx context.Context, project string, 
 			} else {
 				r.logger.Info("service status changed", "project", project, "service", svc.Name, "status", newStatus)
 			}
-		}
-
-		// Push backends to ingress so it can route requests to this service.
-		if r.ingress != nil && len(svc.Spec.Routes) > 0 {
-			r.pushBackends(ctx, project, svc, ids)
 		}
 	}
 }
@@ -299,11 +318,17 @@ func (r *Reconciler) pushBackends(ctx context.Context, project string, svc types
 	ip, port := backendDial(svc.Spec)
 	backends := make([]ingress.Backend, 0, len(ids))
 	for _, id := range ids {
-		snap, _ := r.probes.Snapshot(id)
+		snap, tracked := r.probes.Snapshot(id)
+		// Optimistic healthy on first sight: a brand-new container has no
+		// snapshot yet (Track hasn't fired its first probe), so default to
+		// healthy. Otherwise probe-via-ingress can never bootstrap — the
+		// probe gets 503 (no healthy backend) → never succeeds → backend
+		// stays unhealthy forever (SC-007 deadlock without this).
+		healthy := !tracked || snap.HealthOK
 		b := ingress.Backend{
 			ContainerID: id,
 			Port:        port,
-			Healthy:     snap.HealthOK,
+			Healthy:     healthy,
 		}
 		if ip != "" {
 			// Shortcut: host-port dial.
