@@ -24,6 +24,7 @@ Cross-reference each module's license via `pkg.go.dev/<module>?tab=licenses` and
 | `github.com/spf13/cobra` | v1.10.2 | Apache-2.0 | https://github.com/spf13/cobra/blob/main/LICENSE.txt |
 | `github.com/spf13/viper` | v1.21.0 | MIT | https://github.com/spf13/viper/blob/master/LICENSE |
 | `golang.org/x/crypto` | v0.51.0 | BSD-3-Clause | https://cs.opensource.google/go/x/crypto/+/master:LICENSE |
+| `github.com/caddyserver/certmagic` | v0.25.3 | Apache-2.0 | https://github.com/caddyserver/certmagic/blob/master/LICENSE.txt |
 
 ## Transitive dependencies
 
@@ -67,3 +68,4 @@ go list -m all | grep -v '^github.com/proxa-server/proxa' | sort -u | wc -l
 
 - **2026-05-13** — initial audit at v0.1.0 (feature 001 polish T065). Module count: ~99.
 - **2026-05-15** — feature 002 (health checks) audit refresh. Module count: 102 (one new test-only transitive surface from `docker/docker/pkg/stdcopy` import path resolution; no new direct deps; probe package is stdlib-only). All licenses still on the §IX allow-list.
+- **2026-05-17** — feature 003 (ingress) audit refresh. ONE new direct dep: `caddyserver/certmagic` (Apache-2.0). Transitive surface +19 modules (acmez/v3, libdns, miekg/dns, zeebo/blake3, klauspost/cpuid/v2, caddyserver/zerossl, go.uber.org/zap + multierr + exp, and a handful of cert/TLS helpers). Total `go list -m all` count now 121. All new transitives Apache-2.0 / MIT / BSD-3-Clause per pkg.go.dev spot-checks. No §IX violations.
