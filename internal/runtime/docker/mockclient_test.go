@@ -28,6 +28,10 @@ type mockDockerClient struct {
 	listCalls      []container.ListOptions
 	startCalledFor []string
 
+	// logs wiring (used by logs_test.go)
+	logsBody []byte
+	logsErr  error
+
 	// exec wiring (used by exec_test.go)
 	execCreateCalls  []mockExecCreateCall
 	execAttachResp   string // bytes the mock streams back (TTY-mode plain)
@@ -80,6 +84,18 @@ func (m *mockDockerClient) ServerVersion(context.Context) (types.Version, error)
 }
 func (m *mockDockerClient) Info(context.Context) (system.Info, error) { return system.Info{}, nil }
 func (m *mockDockerClient) Close() error                              { return nil }
+
+// containerLogsBody is what the mock returns from ContainerLogs.
+// Tests can stuff pre-built stdcopy-framed bytes here.
+func (m *mockDockerClient) ContainerLogs(_ context.Context, _ string, _ container.LogsOptions) (io.ReadCloser, error) {
+	if m.logsErr != nil {
+		return nil, m.logsErr
+	}
+	if m.logsBody == nil {
+		return io.NopCloser(bytes.NewReader(nil)), nil
+	}
+	return io.NopCloser(bytes.NewReader(m.logsBody)), nil
+}
 
 func (m *mockDockerClient) ContainerExecCreate(_ context.Context, id string, opts container.ExecOptions) (container.ExecCreateResponse, error) {
 	m.execCreateCalls = append(m.execCreateCalls, mockExecCreateCall{containerID: id, opts: opts})

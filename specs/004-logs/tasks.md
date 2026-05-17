@@ -54,11 +54,11 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 > Phase 1 (Setup) is empty for this feature — zero new third-party deps, all package directories already exist. Implementation starts at Phase 2.
 
-- [ ] T001 Create `internal/runtime/docker/logs.go` implementing `Runtime.StreamLogs(ctx, id, opts)`. Body: call `cli.ContainerLogs(ctx, id, container.LogsOptions{ShowStdout, ShowStderr, Follow, Tail, Since, Timestamps})`, pipe the response through `stdcopy.StdCopy` into an `io.Pipe`, return the pipe reader as `io.ReadCloser`. Closing the reader cancels the demux goroutine. Commit: `feat(runtime/docker): implement StreamLogs via ContainerLogs + stdcopy demux`.
+- [X] T001 Create `internal/runtime/docker/logs.go` implementing `Runtime.StreamLogs(ctx, id, opts)`. Body: call `cli.ContainerLogs(ctx, id, container.LogsOptions{ShowStdout, ShowStderr, Follow, Tail, Since, Timestamps})`, pipe the response through `stdcopy.StdCopy` into an `io.Pipe`, return the pipe reader as `io.ReadCloser`. Closing the reader cancels the demux goroutine. Commit: `feat(runtime/docker): implement StreamLogs via ContainerLogs + stdcopy demux`.
 
-- [ ] T002 Remove the `StreamLogs` stub from `internal/runtime/docker/exec.go` (the line that returns `ErrNotImplemented`). Add a one-line doc comment to that file pointing at `logs.go`. Commit: `refactor(runtime/docker): move StreamLogs stub-removal to logs.go`.
+- [X] T002 Remove the `StreamLogs` stub from `internal/runtime/docker/exec.go` (the line that returns `ErrNotImplemented`). Add a one-line doc comment to that file pointing at `logs.go`. Commit: `refactor(runtime/docker): move StreamLogs stub-removal to logs.go`.
 
-- [ ] T003 Extend `internal/runtime/docker/mockclient_test.go` with a `ContainerLogs` method on `mockDockerClient`. Mock returns a configurable `io.ReadCloser` containing pre-built stdcopy-framed bytes so unit tests can verify demux output. Commit: `test(runtime/docker): add ContainerLogs to mockDockerClient`.
+- [X] T003 Extend `internal/runtime/docker/mockclient_test.go` with a `ContainerLogs` method on `mockDockerClient`. Mock returns a configurable `io.ReadCloser` containing pre-built stdcopy-framed bytes so unit tests can verify demux output. Commit: `test(runtime/docker): add ContainerLogs to mockDockerClient`.
 
 - [ ] T004 [P] Add `internal/runtime/docker/logs_test.go` with unit cases: (a) one stdout frame returns one demuxed line; (b) interleaved stdout+stderr frames return interleaved demuxed bytes in input order; (c) closing the returned reader stops the demux goroutine (verified with `goleak`-style goroutine count). Commit: `test(runtime/docker): cover StreamLogs demux and shutdown`.
 
