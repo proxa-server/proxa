@@ -1,6 +1,7 @@
 package toml
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 
@@ -209,6 +210,74 @@ func validateHealth(td types.TaskDef) error {
 		}
 	}
 	return nil
+}
+
+// RouteLookup is the minimal store surface ValidateAgainstStore needs.
+// Implemented by internal/store.StateStore — declared here as a tiny
+// interface so the parser package keeps its narrow import surface.
+type RouteLookup interface {
+	ListProjects(ctx context.Context) ([]types.Project, error)
+	ListServices(ctx context.Context, project string) ([]types.Service, error)
+}
+
+// ValidateAgainstStore runs Validate AND a project-scoped + cross-project
+// route-conflict check (§III + FR-017) that compares td.Routes against
+// every other service already in the store. Replacing a service's own
+// routes is always allowed (skipped from the comparison).
+func ValidateAgainstStore(ctx context.Context, td types.TaskDef, lookup RouteLookup) error {
+	if err := Validate(td); err != nil {
+		return err
+	}
+	if len(td.Routes) == 0 || lookup == nil {
+		return nil
+	}
+	projects, err := lookup.ListProjects(ctx)
+	if err != nil {
+		return fmt.Errorf("parser/toml: list projects for route check: %w", err)
+	}
+	for _, p := range projects {
+		services, err := lookup.ListServices(ctx, p.Name)
+		if err != nil {
+			return fmt.Errorf("parser/toml: list services for route check: %w", err)
+		}
+		for _, svc := range services {
+			if svc.Project == td.Project && svc.Name == td.Name {
+				continue // same service being updated
+			}
+			for _, existing := range svc.Spec.Routes {
+				for _, newR := range td.Routes {
+					if routesConflict(newR, existing, td.Project, svc.Project) {
+						return &validationError{
+							Code: "route-conflict",
+							Message: fmt.Sprintf(
+								"route %q conflicts with project %q service %q route %q",
+								routeStr(newR), svc.Project, svc.Name, routeStr(existing)),
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func routesConflict(a, b types.Route, aProject, bProject string) bool {
+	if a.Host != b.Host {
+		return false
+	}
+	// Cross-project: any host collision is a conflict (FR-017 + §III).
+	if aProject != bProject {
+		return true
+	}
+	// Same project: only (host, path) collision is a conflict.
+	return a.Path == b.Path
+}
+
+func routeStr(r types.Route) string {
+	if r.L4 != "" {
+		return fmt.Sprintf("%s://%s:%d", r.L4, r.Host, r.Port)
+	}
+	return r.Host + r.Path
 }
 
 // contains is a tiny strings.Contains alternative.

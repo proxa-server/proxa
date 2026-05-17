@@ -8,9 +8,26 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	parsertoml "github.com/proxa-server/proxa/internal/parser/toml"
 	"github.com/proxa-server/proxa/internal/store"
 	"github.com/proxa-server/proxa/pkg/types"
 )
+
+// errCoder is implemented by parser validation errors that carry a
+// stable error code.
+type errCoder interface {
+	ErrCode() string
+}
+
+// errCodeOf extracts a stable error code from a parser/validation error,
+// falling back to "invalid-spec" for non-coded errors.
+func errCodeOf(err error) string {
+	var coder errCoder
+	if errors.As(err, &coder) {
+		return coder.ErrCode()
+	}
+	return "invalid-spec"
+}
 
 // SystemStatus is the response shape for GET /api/v1/system/status.
 type SystemStatus struct {
@@ -183,6 +200,14 @@ func (s *Server) handleUpsertService(w http.ResponseWriter, r *http.Request) {
 				"create the project before upserting a service in it")
 			return
 		}
+	}
+
+	// Cross-service route-conflict check (FR-017, §III). The CLI's
+	// per-TOML Validate runs at parse time; this is the authoritative
+	// check that sees every other service in every project.
+	if err := parsertoml.ValidateAgainstStore(r.Context(), spec, s.store); err != nil {
+		writeError(w, http.StatusBadRequest, errCodeOf(err), err.Error())
+		return
 	}
 
 	svc := types.Service{
