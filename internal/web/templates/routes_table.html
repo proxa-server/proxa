@@ -1,0 +1,50 @@
+<div class="card"
+     hx-get="/ui/routes"
+     hx-trigger="every 5s"
+     hx-target="this"
+     hx-swap="outerHTML">
+  <div class="card-header">Routes</div>
+  {{- if eq .TotalRoutes 0 -}}
+    <div class="empty">
+      No routes yet.<br>
+      <span style="margin-top:12px;display:inline-block">Add a <code>[[route]]</code> block to a service TOML and re-run <code>proxa up</code></span>
+    </div>
+  {{- else -}}
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Project</th>
+        <th>Host</th>
+        <th>Path</th>
+        <th>Service</th>
+        <th>TLS</th>
+        <th>Backends</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{- range .Routes -}}
+          <tr>
+            <td><span class="chip chip-brand">{{.Project}}</span></td>
+            <td class="svc-name">{{if .L4}}<span class="chip chip-neutral">{{.L4}}://</span> {{end}}{{.Host}}{{if .Port}}:{{.Port}}{{end}}</td>
+            <td class="svc-image">{{if .Path}}{{.Path}}{{else}}—{{end}}</td>
+            <td class="svc-name">{{.Service}}</td>
+            <td>
+              {{- if eq .TLSStatus "valid" -}}
+                <span class="chip chip-blue">● valid</span>
+              {{- else if eq .TLSStatus "renewing" -}}
+                <span class="chip chip-purple">● renewing</span>
+              {{- else if eq .TLSStatus "pending" -}}
+                <span class="chip chip-amber">● pending</span>
+              {{- else if eq .TLSStatus "failed" -}}
+                <span class="chip chip-red">● failed</span>
+              {{- else -}}
+                <span class="chip chip-neutral">● {{.TLSStatus}}</span>
+              {{- end -}}
+            </td>
+            <td class="svc-replicas">{{.BackendCount}}</td>
+          </tr>
+      {{- end -}}
+    </tbody>
+  </table>
+  {{- end -}}
+</div>
