@@ -24,6 +24,17 @@
   <div class="cluster-status">
     <span class="dot green"></span>
     <span>{{.Node.ID}} · {{.Node.Status}}</span>
+    {{- if .Ingress.HTTPPort -}}
+    <span style="margin-left:12px;color:var(--fg-3);font-size:11.5px">
+      · Ingress {{.Ingress.HTTPPort}}{{if .Ingress.TLSEnabled}} / {{.Ingress.HTTPSPort}}{{end}}
+      {{- if .Ingress.TLSEnabled -}}
+        <span class="chip chip-blue" style="margin-left:6px">TLS:on</span>
+        <span style="margin-left:6px">{{.Ingress.CertCount}} cert(s)</span>
+      {{- else -}}
+        <span class="chip chip-neutral" style="margin-left:6px">TLS:off</span>
+      {{- end -}}
+    </span>
+    {{- end -}}
   </div>
 </nav>
 
@@ -45,6 +56,10 @@
       <div class="stat-value">{{.TotalServices}}</div>
     </div>
     <div class="stat">
+      <div class="stat-label">Routes</div>
+      <div class="stat-value">{{.TotalRoutes}}</div>
+    </div>
+    <div class="stat">
       <div class="stat-label">Containers</div>
       <div class="stat-value">{{.Node.ContainerCount}}</div>
     </div>
@@ -60,6 +75,15 @@
        hx-target="this"
        hx-swap="outerHTML">
     {{template "services_table.html" .}}
+  </div>
+
+  <div class="card"
+       hx-get="/ui/routes"
+       hx-trigger="every 5s"
+       hx-target="this"
+       hx-swap="outerHTML"
+       style="margin-top:16px">
+    {{template "routes_table.html" .}}
   </div>
 
   <div class="footer">
