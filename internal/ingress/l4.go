@@ -27,11 +27,12 @@ type l4Forwarder struct {
 	pools      *poolRegistry
 	logger     *slog.Logger
 
+	mu     sync.Mutex
 	tcpLis net.Listener
 	udpCon net.PacketConn
 
-	udpMu      sync.Mutex
-	udpRoute   map[string]udpStickyEntry // src "ip:port" → backend choice
+	udpMu    sync.Mutex
+	udpRoute map[string]udpStickyEntry // src "ip:port" → backend choice
 }
 
 type udpStickyEntry struct {
@@ -65,11 +66,14 @@ func (f *l4Forwarder) Start(ctx context.Context) error {
 
 // Stop closes the listener; the accept/serve loop in Start returns soon after.
 func (f *l4Forwarder) Stop() {
-	if f.tcpLis != nil {
-		_ = f.tcpLis.Close()
+	f.mu.Lock()
+	tcpLis, udpCon := f.tcpLis, f.udpCon
+	f.mu.Unlock()
+	if tcpLis != nil {
+		_ = tcpLis.Close()
 	}
-	if f.udpCon != nil {
-		_ = f.udpCon.Close()
+	if udpCon != nil {
+		_ = udpCon.Close()
 	}
 }
 
@@ -78,7 +82,9 @@ func (f *l4Forwarder) startTCP(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("ingress/l4: tcp listen %s: %w", f.listenAddr, err)
 	}
+	f.mu.Lock()
 	f.tcpLis = l
+	f.mu.Unlock()
 	f.logger.Info("ingress: L4 TCP listener", "addr", f.listenAddr, "service", f.svc.Project+"/"+f.svc.Service)
 
 	go func() {
@@ -133,7 +139,9 @@ func (f *l4Forwarder) startUDP(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("ingress/l4: udp listen %s: %w", f.listenAddr, err)
 	}
+	f.mu.Lock()
 	f.udpCon = pc
+	f.mu.Unlock()
 	f.logger.Info("ingress: L4 UDP listener", "addr", f.listenAddr, "service", f.svc.Project+"/"+f.svc.Service)
 
 	go func() {
