@@ -62,6 +62,12 @@ func Load() (*Config, error) {
 
 	v.SetConfigName("config")
 	v.SetConfigType("toml")
+	// Look in the env-overridden data dir FIRST (lets tests + dev set
+	// $PROXA_DATA_DIR to a tempdir and drop a config.toml there);
+	// fall back to the default ${HOME}/.proxa.
+	if envDir := os.Getenv("PROXA_DATA_DIR"); envDir != "" {
+		v.AddConfigPath(envDir)
+	}
 	v.AddConfigPath(defaultDataDir)
 	v.SetEnvPrefix("PROXA")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
