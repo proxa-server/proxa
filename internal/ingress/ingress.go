@@ -1,99 +1,108 @@
-// Package ingress is the public-facing traffic ingress. L7 (HTTP/HTTPS)
-// is served via a reverse proxy with automatic TLS via CertMagic; L4
-// (raw TCP/UDP) is served via stdlib net listeners.
+// Package ingress is Proxa's L7/L4 routing layer. It owns the HTTP/HTTPS
+// listener, the ACME-driven TLS certificate lifecycle, the per-service
+// backend pool, and the TCP/UDP forwarders.
 //
-// Routes are derived from TaskDef.Expose plus per-project ingress config
-// and updated by the reconciler whenever a service's expose list or
-// replica set changes.
+// Architecture (see specs/003-ingress/):
 //
-// See specs/000-foundation/contracts/ingresscontroller.md for the full
-// behavioral contract.
+//   - Routes are project-scoped. (host, path) collisions inside a project
+//     and any cross-project host collision are rejected at parse time
+//     (FR-017, §III).
+//   - Backend pools mirror probe.Snapshot.HealthOK — unhealthy replicas
+//     are excluded from selection (FR-013).
+//   - The routing table is held in an atomic.Pointer[*Router] so reads
+//     are lock-free; hot-reload is a pointer swap (R-003, FR-009).
+//   - TLS is auto-provisioned via CertMagic (R-001). HTTP-01 challenge
+//     only in v0.3 (R-002).
+//
+// Interface name `IngressController` is preserved from feature 000 per
+// constitution §I (interfaces declared from day one); the method shape
+// evolved from CRUD-per-route to snapshot-replace as the reconciler-
+// driven design crystallized in 003.
 package ingress
 
 import (
 	"context"
-	"errors"
-	"net"
+	"time"
+
+	"github.com/proxa-server/proxa/pkg/types"
 )
 
-// IngressController accepts external connections and forwards them to
-// backend replicas. Implementations: defaultController (v0.x).
+// IngressController is the contract every routing-layer implementation
+// satisfies. One concrete implementation in v0.3 (certMagicIngress);
+// the v1.0 cluster-mode replacement plugs in behind the same interface.
 //
-// Behavioral rules (full contract in
-// specs/000-foundation/contracts/ingresscontroller.md):
-//
-//   - TLS is automatic for L7 routes via on-demand ACME issuance.
-//   - Backend health is the reconciler's job; the ingress only forwards
-//     to backends present in Route.Backends.
-//   - UpsertRoute MUST atomically replace the backend pool for an
-//     existing route — no requests dropped during the swap.
-//   - L4 listeners bind at Start; runtime port changes require restart.
-//   - Routes are project-scoped; key is (project, host, pathPrefix) for
-//     L7, (protocol, port) for L4.
+// See specs/003-ingress/contracts/ingress.md for the full behavioral
+// contract.
 type IngressController interface {
-	Start(ctx context.Context, cfg Config) error
-	Stop(ctx context.Context) error
+	// Name identifies the implementation ("certmagic", "fake", ...).
+	Name() string
 
-	UpsertRoute(ctx context.Context, r Route) error
-	DeleteRoute(ctx context.Context, project, name string) error
-	ListRoutes(ctx context.Context, project string) ([]Route, error)
+	// Run blocks until ctx cancels. Binds the configured HTTP/HTTPS/L4
+	// listeners and serves traffic until shutdown. Returns the first
+	// non-nil listener error or nil on clean shutdown.
+	Run(ctx context.Context) error
+
+	// UpdateRoutes replaces the entire routing table atomically. The
+	// reconciler calls this each tick after probe snapshots stabilize.
+	// Errors here are configuration errors (conflicts that slipped past
+	// the parser); caller logs and continues serving with the previous
+	// table.
+	UpdateRoutes(ctx context.Context, routes map[ServiceID][]types.Route) error
+
+	// UpdateBackends replaces the backend pool for a single service.
+	// Called by the reconciler each tick with the current
+	// (containerID, IP, healthy) tuples derived from probe.Snapshot.
+	UpdateBackends(ctx context.Context, svc ServiceID, backends []Backend)
+
+	// CertInfo returns the current TLS certificate state for a hostname.
+	// Used by the dashboard's TLS chip. Returns (zero, false) when the
+	// hostname is unknown or when TLS is disabled globally.
+	CertInfo(host string) (CertInfo, bool)
+
+	// IngressInfo returns server-wide ingress metadata for the dashboard
+	// header (HTTP port, HTTPS port, TLS on/off, cert count).
+	IngressInfo() IngressInfo
 }
 
-// Config is the ingress's startup configuration.
-type Config struct {
-	HTTPAddr    string // ":80"
-	HTTPSAddr   string // ":443"
-	L4Listeners []L4Listener
-	ACMEEmail   string // CertMagic contact email
-	ACMECache   string // disk path for cert cache
+// ServiceID uniquely identifies a service across the cluster.
+type ServiceID struct {
+	Project string
+	Service string
 }
 
-// L4Listener describes one raw TCP/UDP listener.
-type L4Listener struct {
-	Addr     string // ":5432"
-	Protocol string // tcp | udp
+// Backend is one reachable replica behind a route. Updated by the
+// reconciler each tick from runtime.ContainerInfo + probe.Snapshot.
+type Backend struct {
+	ContainerID string
+	IPAddress   string // bridge IP from runtime.ContainerInfo.IPAddress
+	Port        int    // container-side port (from PortSpec.Container)
+	Healthy     bool   // mirrors probe.Snapshot.HealthOK
 }
 
-// Route is one ingress route — bound to a single project + service.
-type Route struct {
-	Project  string
-	Service  string
-	Protocol string // http | https | tcp | udp
-	Match    RouteMatch
-	Backends []net.Addr // current healthy replicas, set by the reconciler
-}
+// CertStatus is what the dashboard renders for each route's TLS chip.
+type CertStatus string
 
-// RouteMatch describes how a request maps to a route. L7 uses Host +
-// PathPrefix; L4 uses Port (the listener Addr selects the protocol).
-type RouteMatch struct {
-	Host       string
-	PathPrefix string
-	Port       int
-}
-
-var (
-	// ErrNotFound is returned when the requested route does not exist.
-	ErrNotFound = errors.New("ingress: route not found")
-
-	// ErrNotImplemented is returned by stub implementations.
-	ErrNotImplemented = errors.New("ingress: not implemented")
+const (
+	CertStatusOff      CertStatus = "off"      // [ingress].tls = false
+	CertStatusPending  CertStatus = "pending"  // route declared, ACME not yet succeeded
+	CertStatusValid    CertStatus = "valid"    // cert issued, > 30 days remain
+	CertStatusRenewing CertStatus = "renewing" // < 30 days remain, ACME job in flight
+	CertStatusFailed   CertStatus = "failed"   // last ACME attempt failed
 )
 
-// noopIngressController satisfies [IngressController] with
-// ErrNotImplemented for every method. Useful as a placeholder in unit
-// tests.
-type noopIngressController struct{}
-
-// Compile-time assertion that noopIngressController satisfies
-// IngressController.
-var _ IngressController = noopIngressController{}
-
-func (noopIngressController) Start(context.Context, Config) error             { return ErrNotImplemented }
-func (noopIngressController) Stop(context.Context) error                      { return ErrNotImplemented }
-func (noopIngressController) UpsertRoute(context.Context, Route) error        { return ErrNotImplemented }
-func (noopIngressController) DeleteRoute(context.Context, string, string) error {
-	return ErrNotImplemented
+// CertInfo is read by buildUIData via IngressController.CertInfo(host)
+// for the dashboard TLS chip rendering.
+type CertInfo struct {
+	Host           string
+	Status         CertStatus
+	NotAfter       time.Time // zero when no cert yet
+	LastRenewalErr string    // empty when no error
 }
-func (noopIngressController) ListRoutes(context.Context, string) ([]Route, error) {
-	return nil, ErrNotImplemented
+
+// IngressInfo is the server-wide widget shown in the dashboard header.
+type IngressInfo struct {
+	HTTPPort   int
+	HTTPSPort  int
+	TLSEnabled bool
+	CertCount  int
 }
