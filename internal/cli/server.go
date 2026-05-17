@@ -84,6 +84,7 @@ func runServer(ctx context.Context, cfg *config.Config) error {
 
 	// Server.
 	srv := server.New(cfg, st, rt, recon, authn, authz)
+	srv.WithIngress(ingressCtl)
 	srv.MountRoutes()
 	srv.MountUI()
 
