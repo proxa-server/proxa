@@ -35,6 +35,13 @@ type certMagicIngress struct {
 
 	mu          sync.RWMutex
 	allowedHost map[string]bool // populated from UpdateRoutes for ACME on-demand
+
+	// L4 forwarders, keyed by (proto, port). Diff-updated on each
+	// UpdateRoutes call: new routes spawn forwarders, removed routes
+	// stop them.
+	l4Ctx    context.Context
+	l4Cancel context.CancelFunc
+	l4       map[l4Key]*l4Forwarder
 }
 
 // New constructs a certMagicIngress with the given config. The
@@ -54,6 +61,7 @@ func New(cfg config.IngressConfig, dataDir string, logger *slog.Logger) IngressC
 		tls:         newTLSProvider(cfg, dataDir, logger),
 		proxy:       newProxyHandler(router, pools, logger),
 		allowedHost: make(map[string]bool),
+		l4:          make(map[l4Key]*l4Forwarder),
 	}
 }
 
@@ -61,6 +69,14 @@ func (i *certMagicIngress) Name() string { return "certmagic" }
 
 // Run binds the listeners and blocks until ctx cancels.
 func (i *certMagicIngress) Run(ctx context.Context) error {
+	// L4 forwarders are children of this ctx so they shut down with us.
+	l4Ctx, l4Cancel := context.WithCancel(ctx)
+	i.mu.Lock()
+	i.l4Ctx = l4Ctx
+	i.l4Cancel = l4Cancel
+	i.mu.Unlock()
+	defer l4Cancel()
+
 	httpMux := http.NewServeMux()
 	if i.cfg.TLS {
 		// 301 to HTTPS for everything except ACME challenges (which the
@@ -121,7 +137,8 @@ func (i *certMagicIngress) Run(ctx context.Context) error {
 	}
 }
 
-// UpdateRoutes replaces the routing table atomically.
+// UpdateRoutes replaces the routing table atomically and reconciles
+// the L4 forwarder set (start new, stop gone).
 func (i *certMagicIngress) UpdateRoutes(ctx context.Context, routes map[ServiceID][]types.Route) error {
 	r, err := BuildRouter(routes)
 	if err != nil {
@@ -129,17 +146,52 @@ func (i *certMagicIngress) UpdateRoutes(ctx context.Context, routes map[ServiceI
 	}
 	i.router.Swap(r)
 
-	// Refresh the ACME on-demand allow-list.
+	// Refresh the ACME on-demand allow-list AND compute the desired L4 set.
 	hosts := make(map[string]bool)
-	for _, svcRoutes := range routes {
+	desiredL4 := make(map[l4Key]l4Route)
+	for svcID, svcRoutes := range routes {
 		for _, route := range svcRoutes {
 			if route.L4 == "" && route.Host != "" {
 				hosts[route.Host] = true
+				continue
+			}
+			if route.L4 != "" && route.Port > 0 {
+				desiredL4[l4Key{Proto: route.L4, Port: route.Port}] = l4Route{
+					Project: svcID.Project,
+					Service: svcID,
+					LB:      route.LBStrategy,
+				}
 			}
 		}
 	}
+
 	i.mu.Lock()
 	i.allowedHost = hosts
+	l4Ctx := i.l4Ctx
+	// Stop forwarders for keys that disappeared.
+	for key, fwd := range i.l4 {
+		if _, keep := desiredL4[key]; !keep {
+			fwd.Stop()
+			delete(i.l4, key)
+			i.logger.Info("ingress: L4 forwarder stopped", "proto", key.Proto, "port", key.Port)
+		}
+	}
+	// Start forwarders for keys that appeared.
+	for key, route := range desiredL4 {
+		if _, exists := i.l4[key]; exists {
+			continue
+		}
+		if l4Ctx == nil {
+			continue // Run hasn't started yet; defer
+		}
+		fwd := newL4Forwarder(fmt.Sprintf(":%d", key.Port), key.Proto, route.Service, route.LB, i.pools, i.logger)
+		i.l4[key] = fwd
+		go func(fwd *l4Forwarder) {
+			if err := fwd.Start(l4Ctx); err != nil {
+				i.logger.Error("ingress: L4 forwarder failed", "err", err)
+			}
+		}(fwd)
+	}
 	i.mu.Unlock()
 	return nil
 }
