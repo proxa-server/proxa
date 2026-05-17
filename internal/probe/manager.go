@@ -32,6 +32,12 @@ type Manager struct {
 	rt  runtime.Runtime
 	log *slog.Logger
 
+	// ingressHTTPPort is the loopback port HTTPProbes target when a
+	// service opts into spec.Health.Via == "ingress". Set via Options.
+	// Zero value disables the ingress path; HTTPProbe falls back to the
+	// direct bridge-IP dial.
+	ingressHTTPPort int
+
 	mu      sync.Mutex
 	entries map[string]*entry
 
@@ -39,6 +45,12 @@ type Manager struct {
 	mgrCancel context.CancelFunc
 
 	wg sync.WaitGroup
+}
+
+// Options carries optional Manager configuration. Empty value yields
+// v0.2 behavior (HTTPProbes always dial the bridge IP).
+type Options struct {
+	IngressHTTPPort int
 }
 
 type entry struct {
@@ -51,16 +63,23 @@ type entry struct {
 
 // New constructs a Manager. log defaults to slog.Default() if nil.
 func New(rt runtime.Runtime, log *slog.Logger) *Manager {
+	return NewWithOptions(rt, log, Options{})
+}
+
+// NewWithOptions is like New but accepts an Options struct. Used by
+// the CLI to plumb the ingress HTTP port for probe-via-ingress.
+func NewWithOptions(rt runtime.Runtime, log *slog.Logger, opts Options) *Manager {
 	if log == nil {
 		log = slog.Default()
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Manager{
-		rt:        rt,
-		log:       log,
-		entries:   make(map[string]*entry),
-		mgrCtx:    ctx,
-		mgrCancel: cancel,
+		rt:              rt,
+		log:             log,
+		ingressHTTPPort: opts.IngressHTTPPort,
+		entries:         make(map[string]*entry),
+		mgrCtx:          ctx,
+		mgrCancel:       cancel,
 	}
 }
 
@@ -199,16 +218,28 @@ func (m *Manager) probeLoop(ctx context.Context, id string, spec types.TaskDef, 
 	var httpProbe *HTTPProbe
 	var execProbe *ExecProbe
 	if spec.Health.Path != "" {
-		info, err := m.rt.InspectContainer(ctx, id)
-		if err != nil {
-			m.log.Error("probe: inspect for HTTP probe failed", "container", id, "err", err)
-			return
+		// Probe-via-ingress path: dial 127.0.0.1:<ingress-http-port>
+		// and inject the route's host header. Works on macOS Docker
+		// Desktop where the bridge subnet is unreachable from the host.
+		if spec.Health.Via == "ingress" && m.ingressHTTPPort > 0 {
+			host := lookupRouteHost(spec)
+			if host == "" {
+				m.log.Error("probe: Health.Via=ingress but no [[route]] declared", "container", id)
+				return
+			}
+			httpProbe = NewHTTPProbeViaIngress(m.ingressHTTPPort, host, spec.Health.Path, timeout)
+		} else {
+			info, err := m.rt.InspectContainer(ctx, id)
+			if err != nil {
+				m.log.Error("probe: inspect for HTTP probe failed", "container", id, "err", err)
+				return
+			}
+			port := spec.Health.Port
+			if port == 0 && len(spec.Expose) > 0 {
+				port = spec.Expose[0].Container
+			}
+			httpProbe = NewHTTPProbe(info.IPAddress, port, spec.Health.Path, timeout)
 		}
-		port := spec.Health.Port
-		if port == 0 && len(spec.Expose) > 0 {
-			port = spec.Expose[0].Container
-		}
-		httpProbe = NewHTTPProbe(info.IPAddress, port, spec.Health.Path, timeout)
 	}
 	if len(spec.Health.Command) > 0 {
 		execProbe = NewExecProbe(m.rt, id, spec.Health.Command, timeout)
@@ -266,6 +297,17 @@ func (m *Manager) recordResult(id string, e *entry, r Result, retries int) {
 	default:
 		m.log.Debug("probe: result", "container", id, "healthy", next.HealthOK, "latency_ms", r.Latency.Milliseconds())
 	}
+}
+
+// lookupRouteHost returns the first L7 [[route]].host on the spec, or
+// "" when none exist. Used by the probe-via-ingress path.
+func lookupRouteHost(spec types.TaskDef) string {
+	for _, r := range spec.Routes {
+		if r.L4 == "" && r.Host != "" {
+			return r.Host
+		}
+	}
+	return ""
 }
 
 // isEmptyHealth reports whether the [health] block is the zero value.
