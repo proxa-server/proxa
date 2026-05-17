@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/proxa-server/proxa/internal/ingress"
 	"github.com/proxa-server/proxa/internal/probe"
 	rt "github.com/proxa-server/proxa/internal/runtime"
 	dockerlabels "github.com/proxa-server/proxa/internal/runtime/docker"
@@ -18,6 +19,7 @@ type Reconciler struct {
 	store    store.StateStore
 	runtime  rt.Runtime
 	probes   *probe.Manager
+	ingress  ingress.IngressController
 	interval time.Duration
 	poke     chan struct{}
 	logger   *slog.Logger
@@ -25,9 +27,10 @@ type Reconciler struct {
 
 // Options configure a Reconciler at construction time.
 type Options struct {
-	TickInterval time.Duration  // default 5s
-	Logger       *slog.Logger   // default slog.Default()
-	Probes       *probe.Manager // required; pass probe.New(runtime, logger)
+	TickInterval time.Duration             // default 5s
+	Logger       *slog.Logger              // default slog.Default()
+	Probes       *probe.Manager            // required; pass probe.New(runtime, logger)
+	Ingress      ingress.IngressController // optional; reconciler skips ingress push when nil
 }
 
 // New returns a Reconciler ready for Run.
@@ -46,6 +49,7 @@ func New(s store.StateStore, runtime rt.Runtime, opts Options) *Reconciler {
 		store:    s,
 		runtime:  runtime,
 		probes:   probes,
+		ingress:  opts.Ingress,
 		interval: opts.TickInterval,
 		poke:     make(chan struct{}, 1),
 		logger:   opts.Logger,

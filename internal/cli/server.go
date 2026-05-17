@@ -15,6 +15,7 @@ import (
 	"github.com/proxa-server/proxa/internal/auth/dbpolicy"
 	"github.com/proxa-server/proxa/internal/auth/token"
 	"github.com/proxa-server/proxa/internal/config"
+	"github.com/proxa-server/proxa/internal/ingress"
 	"github.com/proxa-server/proxa/internal/probe"
 	"github.com/proxa-server/proxa/internal/reconciler"
 	"github.com/proxa-server/proxa/internal/runtime/docker"
@@ -70,11 +71,15 @@ func runServer(ctx context.Context, cfg *config.Config) error {
 	// Probe manager (health checks per replica).
 	probes := probe.New(rt, logger)
 
+	// Ingress (L7/L4 routing layer).
+	ingressCtl := ingress.New(cfg.Ingress, cfg.DataDir, logger)
+
 	// Reconciler.
 	recon := reconciler.New(st, rt, reconciler.Options{
 		TickInterval: cfg.TickInterval,
 		Logger:       logger,
 		Probes:       probes,
+		Ingress:      ingressCtl,
 	})
 
 	// Server.
@@ -82,10 +87,15 @@ func runServer(ctx context.Context, cfg *config.Config) error {
 	srv.MountRoutes()
 	srv.MountUI()
 
-	// Run reconciler in background, server in foreground.
+	// Run reconciler + ingress in background, server in foreground.
 	reconCtx, cancelRecon := context.WithCancel(ctx)
 	defer cancelRecon()
 	go recon.Run(reconCtx)
+	go func() {
+		if err := ingressCtl.Run(reconCtx); err != nil {
+			logger.Error("ingress: run failed", "err", err)
+		}
+	}()
 
 	// Catch SIGINT/SIGTERM.
 	sigCtx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
