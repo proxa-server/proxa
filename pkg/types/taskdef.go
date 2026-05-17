@@ -18,6 +18,7 @@ type TaskDef struct {
 	Health    HealthCheck       `toml:"health"    json:"health"`
 	Resources ResourceLimits    `toml:"resources" json:"resources"`
 	Schedule  string            `toml:"schedule"  json:"schedule,omitempty"` // cron expr; jobs only
+	Routes    []Route           `toml:"route"     json:"routes,omitempty"`   // [[route]] blocks
 }
 
 // VolumeMount is a host-path or named-volume mount for a container.
@@ -55,6 +56,31 @@ type HealthCheck struct {
 	Interval time.Duration `toml:"interval" json:"interval"`
 	Timeout  time.Duration `toml:"timeout"  json:"timeout"`
 	Retries  int           `toml:"retries"  json:"retries"`
+	// Via selects the network path the HTTP probe takes:
+	//   "" or "direct" → dial the container's bridge IP (default, v0.2 behavior).
+	//   "ingress"      → loopback HTTP request through our own ingress with
+	//                    Host header injection (works on macOS Docker Desktop
+	//                    where bridge IPs are unreachable from the host).
+	// Only meaningful for HTTP probes (Path != ""); ignored for exec.
+	Via string `toml:"via" json:"via,omitempty"`
+}
+
+// Route is one operator-declared mapping of (hostname, optional path)
+// → this service. Multiple routes per service are allowed (e.g., a
+// service serving both api.example.com and admin.example.com).
+//
+// L7 routes (L4 == "") match by HTTP Host header + URL path-prefix.
+// L4 routes (L4 in {"tcp","udp"}) bind the configured Port and
+// transparently forward bytes to one of the service's backends.
+//
+// See specs/003-ingress/contracts/route.md for the full grammar and
+// validation rules.
+type Route struct {
+	Host       string `toml:"host"        json:"host"`                 // FQDN; required for L7
+	Path       string `toml:"path"        json:"path,omitempty"`        // prefix; "*" trailing wildcard only
+	L4         string `toml:"l4"          json:"l4,omitempty"`          // "" (L7), "tcp", "udp"
+	Port       int    `toml:"port"        json:"port,omitempty"`        // L4 only — required for tcp/udp
+	LBStrategy string `toml:"lb_strategy" json:"lbStrategy,omitempty"`  // "random" (default), "round-robin"
 }
 
 // ResourceLimits are the per-container resource caps passed through to

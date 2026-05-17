@@ -56,9 +56,9 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ## Phase 1: Setup
 
-- [ ] T001 Add `github.com/caddyserver/certmagic` (Apache-2.0) to `go.mod` via `go get github.com/caddyserver/certmagic@latest`, run `go mod tidy`, commit the resulting `go.mod` + `go.sum`. Verify total module count grows by ≤ 20 (research R-001 budget). Commit: `build(deps): add caddyserver/certmagic for ACME-driven TLS`.
+- [X] T001 Add `github.com/caddyserver/certmagic` (Apache-2.0) to `go.mod` via `go get github.com/caddyserver/certmagic@latest`, run `go mod tidy`, commit the resulting `go.mod` + `go.sum`. Verify total module count grows by ≤ 20 (research R-001 budget). Commit: `build(deps): add caddyserver/certmagic for ACME-driven TLS`.
 
-- [ ] T002 [P] Create the `internal/ingress/` directory with `.gitkeep` placeholder (will be replaced by real files in Phase 2). Commit: `chore(repo): scaffold internal/ingress package directory`.
+- [X] T002 [P] Create the `internal/ingress/` directory with `.gitkeep` placeholder (will be replaced by real files in Phase 2). Commit: `chore(repo): scaffold internal/ingress package directory`.
 
 ---
 
