@@ -68,8 +68,12 @@ func runServer(ctx context.Context, cfg *config.Config) error {
 	authn := token.New(st)
 	authz := dbpolicy.New(st)
 
-	// Probe manager (health checks per replica).
-	probes := probe.New(rt, logger)
+	// Probe manager (health checks per replica). Pass the ingress
+	// HTTP port so probes can opt into via=ingress and skip the
+	// bridge-IP dial that doesn't work on Docker Desktop.
+	probes := probe.NewWithOptions(rt, logger, probe.Options{
+		IngressHTTPPort: cfg.Ingress.HTTPPort,
+	})
 
 	// Ingress (L7/L4 routing layer).
 	ingressCtl := ingress.New(cfg.Ingress, cfg.DataDir, logger)
