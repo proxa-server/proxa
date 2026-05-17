@@ -1,0 +1,11 @@
+name = "web"
+image = "traefik/whoami:latest"
+
+[[expose]]
+container = 80
+protocol = "http"
+
+[health]
+path = "/health"
+port = 80
+via = "broadcast"

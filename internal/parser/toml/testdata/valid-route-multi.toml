@@ -1,0 +1,15 @@
+name = "api"
+image = "traefik/whoami:latest"
+replicas = 3
+
+[[expose]]
+container = 80
+protocol = "http"
+
+[[route]]
+host = "api.example.com"
+
+[[route]]
+host = "api-legacy.example.com"
+path = "/v1/*"
+lb_strategy = "round-robin"

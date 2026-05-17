@@ -1,0 +1,7 @@
+name = "web"
+image = "traefik/whoami:latest"
+
+[[route]]
+host = "db.example.com"
+l4 = "sctp"
+port = 5432

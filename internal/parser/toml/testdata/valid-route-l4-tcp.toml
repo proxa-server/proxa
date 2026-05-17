@@ -1,0 +1,9 @@
+name = "cache"
+image = "redis:7-alpine"
+replicas = 1
+stateful = true
+
+[[route]]
+host = "cache.example.com"
+l4 = "tcp"
+port = 6379
