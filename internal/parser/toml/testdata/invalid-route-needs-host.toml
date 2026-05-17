@@ -1,0 +1,4 @@
+name = "web"
+image = "traefik/whoami:latest"
+
+[[route]]

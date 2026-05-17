@@ -1,0 +1,10 @@
+name = "web"
+image = "traefik/whoami:latest"
+replicas = 1
+
+[[expose]]
+container = 80
+protocol = "http"
+
+[[route]]
+host = "whoami.example.com"

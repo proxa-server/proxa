@@ -19,5 +19,7 @@ func (s *Server) MountRoutes() {
 			r.Delete("/{name}", s.handleDeleteService)
 			r.Post("/{name}/scale", s.handleScaleService)
 		})
+		r.Get("/routes", s.handleListRoutes)
+		r.Get("/ingress", s.handleGetIngress)
 	})
 }

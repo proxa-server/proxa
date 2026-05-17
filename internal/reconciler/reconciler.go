@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/proxa-server/proxa/internal/ingress"
 	"github.com/proxa-server/proxa/internal/probe"
 	rt "github.com/proxa-server/proxa/internal/runtime"
 	dockerlabels "github.com/proxa-server/proxa/internal/runtime/docker"
@@ -18,6 +19,7 @@ type Reconciler struct {
 	store    store.StateStore
 	runtime  rt.Runtime
 	probes   *probe.Manager
+	ingress  ingress.IngressController
 	interval time.Duration
 	poke     chan struct{}
 	logger   *slog.Logger
@@ -25,9 +27,10 @@ type Reconciler struct {
 
 // Options configure a Reconciler at construction time.
 type Options struct {
-	TickInterval time.Duration  // default 5s
-	Logger       *slog.Logger   // default slog.Default()
-	Probes       *probe.Manager // required; pass probe.New(runtime, logger)
+	TickInterval time.Duration             // default 5s
+	Logger       *slog.Logger              // default slog.Default()
+	Probes       *probe.Manager            // required; pass probe.New(runtime, logger)
+	Ingress      ingress.IngressController // optional; reconciler skips ingress push when nil
 }
 
 // New returns a Reconciler ready for Run.
@@ -46,6 +49,7 @@ func New(s store.StateStore, runtime rt.Runtime, opts Options) *Reconciler {
 		store:    s,
 		runtime:  runtime,
 		probes:   probes,
+		ingress:  opts.Ingress,
 		interval: opts.TickInterval,
 		poke:     make(chan struct{}, 1),
 		logger:   opts.Logger,
@@ -90,7 +94,10 @@ func (r *Reconciler) Run(ctx context.Context) {
 }
 
 // reconcileOnce performs one full reconciliation pass across every
-// project. Errors are logged per-project and per-action.
+// project. Routes are pushed BEFORE per-project work so any probe that
+// opts into via=ingress has the route table available on its first
+// attempt (FR-010 + SC-007). Backends are pushed inside reconcileProject
+// before probe Track, same reason.
 func (r *Reconciler) reconcileOnce(ctx context.Context) {
 	projects, err := r.store.ListProjects(ctx)
 	if err != nil {
@@ -98,8 +105,36 @@ func (r *Reconciler) reconcileOnce(ctx context.Context) {
 		return
 	}
 
+	if r.ingress != nil {
+		r.pushRoutes(ctx, projects)
+	}
+
 	for _, p := range projects {
 		r.reconcileProject(ctx, p.Name)
+	}
+}
+
+// pushRoutes collects every service's [[route]] declarations across
+// every project and publishes them as a single atomic snapshot to the
+// ingress. Empty maps are valid (means "no routes" → ingress returns
+// 404 for every request).
+func (r *Reconciler) pushRoutes(ctx context.Context, projects []types.Project) {
+	routes := make(map[ingress.ServiceID][]types.Route)
+	for _, p := range projects {
+		services, err := r.store.ListServices(ctx, p.Name)
+		if err != nil {
+			r.logger.Error("list services for route push", "project", p.Name, "err", err)
+			continue
+		}
+		for _, svc := range services {
+			if len(svc.Spec.Routes) == 0 {
+				continue
+			}
+			routes[ingress.ServiceID{Project: p.Name, Service: svc.Name}] = svc.Spec.Routes
+		}
+	}
+	if err := r.ingress.UpdateRoutes(ctx, routes); err != nil {
+		r.logger.Error("ingress: UpdateRoutes rejected", "err", err)
 	}
 }
 
@@ -184,6 +219,8 @@ func (r *Reconciler) updateProbesAndStatus(ctx context.Context, project string, 
 	idsByService := make(map[string][]string, len(desired))
 	activeIDs := make(map[string]struct{}, len(actual))
 
+	// Pass 1: collect IDs per service. NO Track yet — we want backends
+	// pushed to ingress first so probe-via-ingress works on first hit.
 	for _, c := range actual {
 		if !isActive(c.State) {
 			continue
@@ -193,16 +230,37 @@ func (r *Reconciler) updateProbesAndStatus(ctx context.Context, project string, 
 		if p != project {
 			continue
 		}
-		spec, ok := specByService[s]
-		if !ok {
+		if _, ok := specByService[s]; !ok {
 			continue // container belongs to a deleted service; let the next tick remove it
-		}
-		if err := r.probes.Track(c.ID, spec); err != nil {
-			r.logger.Warn("probe track failed", "container", c.ID, "err", err)
-			continue
 		}
 		idsByService[s] = append(idsByService[s], c.ID)
 		activeIDs[c.ID] = struct{}{}
+	}
+
+	// Pass 2: push backends to ingress for every service that has
+	// routes (must happen BEFORE probe Track for FR-010 / SC-007).
+	if r.ingress != nil {
+		for _, svc := range desired {
+			if len(svc.Spec.Routes) == 0 {
+				continue
+			}
+			r.pushBackends(ctx, project, svc, idsByService[svc.Name])
+		}
+	}
+
+	// Pass 3: Track probes (now safe — ingress has routes + backends).
+	for _, c := range actual {
+		if !isActive(c.State) {
+			continue
+		}
+		s := c.Labels[dockerlabels.LabelService]
+		spec, ok := specByService[s]
+		if !ok {
+			continue
+		}
+		if err := r.probes.Track(c.ID, spec); err != nil {
+			r.logger.Warn("probe track failed", "container", c.ID, "err", err)
+		}
 	}
 
 	// Untrack any container that has disappeared from THIS project.
@@ -225,7 +283,7 @@ func (r *Reconciler) updateProbesAndStatus(ctx context.Context, project string, 
 		}
 	}
 
-	// Aggregate + persist Service.Status when it changed.
+	// Pass 4: aggregate + persist Service.Status when it changed.
 	for _, svc := range desired {
 		ids := idsByService[svc.Name]
 		snaps := make([]probe.Snapshot, 0, len(ids))
@@ -235,16 +293,77 @@ func (r *Reconciler) updateProbesAndStatus(ctx context.Context, project string, 
 			}
 		}
 		newStatus := Aggregate(svc.Spec.Replicas, snaps)
-		if newStatus == svc.Status {
-			continue
+		if newStatus != svc.Status {
+			svc.Status = newStatus
+			if err := r.store.PutService(ctx, project, svc); err != nil {
+				r.logger.Error("persist service status", "project", project, "service", svc.Name, "err", err)
+			} else {
+				r.logger.Info("service status changed", "project", project, "service", svc.Name, "status", newStatus)
+			}
 		}
-		svc.Status = newStatus
-		if err := r.store.PutService(ctx, project, svc); err != nil {
-			r.logger.Error("persist service status", "project", project, "service", svc.Name, "err", err)
-			continue
-		}
-		r.logger.Info("service status changed", "project", project, "service", svc.Name, "status", newStatus)
 	}
+}
+
+// pushBackends builds the Backend list for one service and publishes
+// it to the ingress.
+//
+// Reachability resolution per replica:
+//   - If the spec's first [[expose]] declares host > 0, the ingress
+//     dials 127.0.0.1:<hostPort>. Works on Docker Desktop (macOS /
+//     Windows) where the bridge subnet is unreachable from the host.
+//   - Otherwise the ingress dials the container's bridge IP. Required
+//     for multi-replica services on Linux (only one container can bind
+//     a host port at a time).
+func (r *Reconciler) pushBackends(ctx context.Context, project string, svc types.Service, ids []string) {
+	ip, port := backendDial(svc.Spec)
+	backends := make([]ingress.Backend, 0, len(ids))
+	for _, id := range ids {
+		snap, tracked := r.probes.Snapshot(id)
+		// Optimistic healthy on first sight: a brand-new container has no
+		// snapshot yet (Track hasn't fired its first probe), so default to
+		// healthy. Otherwise probe-via-ingress can never bootstrap — the
+		// probe gets 503 (no healthy backend) → never succeeds → backend
+		// stays unhealthy forever (SC-007 deadlock without this).
+		healthy := !tracked || snap.HealthOK
+		b := ingress.Backend{
+			ContainerID: id,
+			Port:        port,
+			Healthy:     healthy,
+		}
+		if ip != "" {
+			// Shortcut: host-port dial.
+			b.IPAddress = ip
+		} else {
+			info, err := r.runtime.InspectContainer(ctx, id)
+			if err != nil || info == nil || info.IPAddress == "" {
+				continue // unreachable replica; skip
+			}
+			b.IPAddress = info.IPAddress
+		}
+		backends = append(backends, b)
+	}
+	r.ingress.UpdateBackends(ctx, ingress.ServiceID{Project: project, Service: svc.Name}, backends)
+}
+
+// backendDial returns (ip, port) for the ingress to dial when routing
+// to a replica of spec. Empty ip means "use the container's bridge IP".
+//
+//	(ip, port) = ("127.0.0.1", expose[0].Host)  when first expose has host > 0
+//	(ip, port) = ("", containerPort)            otherwise (bridge IP at dial time)
+//
+// containerPort is, in order: spec.Health.Port → spec.Expose[0].Container → 80.
+func backendDial(spec types.TaskDef) (string, int) {
+	containerPort := 80
+	switch {
+	case spec.Health.Port > 0:
+		containerPort = spec.Health.Port
+	case len(spec.Expose) > 0 && spec.Expose[0].Container > 0:
+		containerPort = spec.Expose[0].Container
+	}
+	if len(spec.Expose) > 0 && spec.Expose[0].Host > 0 {
+		return "127.0.0.1", spec.Expose[0].Host
+	}
+	return "", containerPort
 }
 
 // _ keeps types reachable for future test helpers.

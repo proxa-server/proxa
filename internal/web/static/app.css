@@ -28,6 +28,8 @@
   --green: #1f8a4c;
   --amber: #b07700;
   --red: #cc2e3d;
+  --blue: #2864c4;
+  --purple: #7a3eb1;
   --serif: "Instrument Serif", Georgia, serif;
 }
 
@@ -128,6 +130,8 @@ html, body {
 .chip-green { background: rgba(31,138,76,.10); color: var(--green); }
 .chip-amber { background: rgba(176,119,0,.10); color: var(--amber); }
 .chip-red { background: rgba(204,46,61,.10); color: var(--red); }
+.chip-blue { background: rgba(40,100,196,.10); color: var(--blue); }
+.chip-purple { background: rgba(122,62,177,.10); color: var(--purple); }
 .chip-neutral { background: var(--surface-2); color: var(--fg-3); }
 .chip-brand { background: var(--brand-soft); color: var(--brand); }
 

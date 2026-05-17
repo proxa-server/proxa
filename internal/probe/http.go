@@ -10,12 +10,52 @@ import (
 )
 
 // HTTPProbe performs an HTTP GET against a container's bridge-network
-// IP (NOT the host port — see specs/002-health-checks/research.md R-001).
+// IP (NOT the host port — see specs/002-health-checks/research.md R-001)
+// OR a loopback ingress port with a route-host header injected when
+// constructed via NewHTTPProbeViaIngress.
 // 2xx response within Timeout = success.
 type HTTPProbe struct {
 	URL     string
+	Host    string // when non-empty, overrides Request.Host (probe-via-ingress)
 	Timeout time.Duration
 	client  *http.Client
+}
+
+// newProbeClient builds the same client both HTTPProbe constructors use.
+func newProbeClient(timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout: timeout,
+		Transport: &http.Transport{
+			MaxIdleConnsPerHost: 1,
+			IdleConnTimeout:     15 * time.Second,
+			DialContext: (&net.Dialer{
+				Timeout: timeout,
+			}).DialContext,
+		},
+	}
+}
+
+// NewHTTPProbeViaIngress builds a probe targeting 127.0.0.1:<ingressPort>
+// with the route's hostname injected as the Host header. Used when a
+// service declares [health].via = "ingress" — bypasses direct
+// bridge-IP dial (works on macOS Docker Desktop).
+//
+// The underlying http.Client mutates the Host header on each request
+// via Request.Host; the URL is always loopback.
+func NewHTTPProbeViaIngress(ingressPort int, routeHost, path string, timeout time.Duration) *HTTPProbe {
+	if timeout <= 0 {
+		timeout = 2 * time.Second
+	}
+	if path == "" {
+		path = "/"
+	}
+	url := fmt.Sprintf("http://127.0.0.1:%d%s", ingressPort, path)
+	return &HTTPProbe{
+		URL:     url,
+		Host:    routeHost,
+		Timeout: timeout,
+		client:  newProbeClient(timeout),
+	}
 }
 
 // NewHTTPProbe builds a probe targeting http://<containerIP>:<port><path>.
@@ -33,16 +73,7 @@ func NewHTTPProbe(containerIP string, port int, path string, timeout time.Durati
 	return &HTTPProbe{
 		URL:     url,
 		Timeout: timeout,
-		client: &http.Client{
-			Timeout: timeout,
-			Transport: &http.Transport{
-				MaxIdleConnsPerHost: 1,
-				IdleConnTimeout:     15 * time.Second,
-				DialContext: (&net.Dialer{
-					Timeout: timeout,
-				}).DialContext,
-			},
-		},
+		client:  newProbeClient(timeout),
 	}
 }
 
@@ -58,6 +89,9 @@ func (p *HTTPProbe) Run(ctx context.Context) Result {
 	req, err := http.NewRequestWithContext(probeCtx, http.MethodGet, p.URL, nil)
 	if err != nil {
 		return Result{At: start, Healthy: false, Latency: time.Since(start), Err: fmt.Errorf("probe/http: build request: %w", err)}
+	}
+	if p.Host != "" {
+		req.Host = p.Host
 	}
 
 	resp, err := p.client.Do(req)

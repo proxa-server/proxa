@@ -1,0 +1,5 @@
+name = "web"
+image = "traefik/whoami:latest"
+
+[[route]]
+host = "*.example.com"

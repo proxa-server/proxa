@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	ingressIface "github.com/proxa-server/proxa/internal/ingress"
 	"github.com/proxa-server/proxa/internal/web"
 )
 
@@ -12,7 +13,32 @@ import (
 type uiData struct {
 	Node          NodeStatus
 	Projects      []ProjectSummary
+	Routes        []RouteRow
 	TotalServices int
+	TotalRoutes   int
+	Ingress       IngressInfoRow
+}
+
+// RouteRow is one row in the dashboard's Routes card. TLSStatus is the
+// string form of ingress.CertStatus ("valid", "renewing", etc.) so the
+// template can switch on it directly.
+type RouteRow struct {
+	Project      string
+	Host         string
+	Path         string
+	L4           string
+	Port         int
+	Service      string
+	TLSStatus    string
+	BackendCount int
+}
+
+// IngressInfoRow is the header widget summarizing the ingress.
+type IngressInfoRow struct {
+	HTTPPort   int
+	HTTPSPort  int
+	TLSEnabled bool
+	CertCount  int
 }
 
 // MountUI registers the slim dashboard routes on the server's Router.
@@ -34,6 +60,7 @@ func (s *Server) MountUI() {
 	})
 	s.Router.With(mw).Get("/ui/", s.handleUIIndex)
 	s.Router.With(mw).Get("/ui/services", s.handleUIServicesFragment)
+	s.Router.With(mw).Get("/ui/routes", s.handleUIRoutesFragment)
 
 	// Static assets — also gated by the same middleware so a TCP listener
 	// without auth doesn't leak the JS/CSS (low-risk but consistent).
@@ -106,8 +133,42 @@ func (s *Server) buildUIData(r *http.Request) uiData {
 				Status:          serviceStatus(svc, actual),
 			})
 			out.TotalServices++
+
+			// Routes: one row per [[route]] block. TLS state via
+			// ingress.CertInfo when available; falls back to "off"
+			// (also the right answer when ingress is nil).
+			for _, route := range svc.Spec.Routes {
+				row := RouteRow{
+					Project:      p.Name,
+					Host:         route.Host,
+					Path:         route.Path,
+					L4:           route.L4,
+					Port:         route.Port,
+					Service:      svc.Name,
+					BackendCount: actual,
+					TLSStatus:    string(ingressIface.CertStatusOff),
+				}
+				if s.ingress != nil && route.L4 == "" {
+					if info, ok := s.ingress.CertInfo(route.Host); ok {
+						row.TLSStatus = string(info.Status)
+					}
+				}
+				out.Routes = append(out.Routes, row)
+				out.TotalRoutes++
+			}
 		}
 		out.Projects = append(out.Projects, ps)
+	}
+
+	// Ingress server-wide widget for the cluster-status header.
+	if s.ingress != nil {
+		info := s.ingress.IngressInfo()
+		out.Ingress = IngressInfoRow{
+			HTTPPort:   info.HTTPPort,
+			HTTPSPort:  info.HTTPSPort,
+			TLSEnabled: info.TLSEnabled,
+			CertCount:  info.CertCount,
+		}
 	}
 	return out
 }
