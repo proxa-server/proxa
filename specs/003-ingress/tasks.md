@@ -146,7 +146,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Add `tests/e2e/ingress_lb_test.go` (build tag `e2e`) covering SC-002: deploy whoami with `replicas = 3` and one `[[route]]`, wait for `proxa ps` to show 3/3 healthy, then issue 30 sequential `curl` requests through the route and parse the `Hostname:` line from each response. Assert ≥ 2 distinct hostnames seen. Optional follow-up sub-test asserts `lb_strategy = "round-robin"` produces an exact 10/10/10 distribution over 30 requests. Commit: `test(e2e): cover replica LB across 3 backends (SC-002)`.
+- [X] T027 [US2] Add `tests/e2e/ingress_lb_test.go` (build tag `e2e`) covering SC-002: deploy whoami with `replicas = 3` and one `[[route]]`, wait for `proxa ps` to show 3/3 healthy, then issue 30 sequential `curl` requests through the route and parse the `Hostname:` line from each response. Assert ≥ 2 distinct hostnames seen. Optional follow-up sub-test asserts `lb_strategy = "round-robin"` produces an exact 10/10/10 distribution over 30 requests. Commit: `test(e2e): cover replica LB across 3 backends (SC-002)`.
 
 **Checkpoint**: SC-002 passes. No new code outside the e2e test — US1's `Proxy` + `BackendPool` already handle LB; this phase confirms it end-to-end.
 
@@ -160,13 +160,13 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Implementation for User Story 3
 
-- [ ] T028 [US3] Create `internal/ingress/l4.go` with `tcpForwarder` and `udpForwarder` types. TCP: `net.Listen` per declared L4 route, accept loop spawns a goroutine per connection that `Pick`s a backend at accept-time, dials it, and `io.Copy` in both directions until either side closes. UDP: `net.ListenPacket`, source-IP+port → backend cached for 30s per R-004, forward packets. Commit: `feat(ingress): implement L4 TCP and UDP forwarders`.
+- [X] T028 [US3] Create `internal/ingress/l4.go` with `tcpForwarder` and `udpForwarder` types. TCP: `net.Listen` per declared L4 route, accept loop spawns a goroutine per connection that `Pick`s a backend at accept-time, dials it, and `io.Copy` in both directions until either side closes. UDP: `net.ListenPacket`, source-IP+port → backend cached for 30s per R-004, forward packets. Commit: `feat(ingress): implement L4 TCP and UDP forwarders`.
 
-- [ ] T029 [US3] [P] Add `internal/ingress/l4_test.go` with a loopback echo server: start an in-process TCP echo server on a random port, register it as a backend, start the L4 forwarder on another random port, dial the forwarder, write+read 1 KiB of random bytes, assert echo. Same shape for UDP with a small datagram. Commit: `test(ingress): cover L4 TCP/UDP forwarders with loopback echo`.
+- [X] T029 [US3] [P] Add `internal/ingress/l4_test.go` with a loopback echo server: start an in-process TCP echo server on a random port, register it as a backend, start the L4 forwarder on another random port, dial the forwarder, write+read 1 KiB of random bytes, assert echo. Same shape for UDP with a small datagram. Commit: `test(ingress): cover L4 TCP/UDP forwarders with loopback echo`.
 
-- [ ] T030 [US3] Wire L4 forwarder lifecycle into `certmagic_ingress.go` `Run`: launch one forwarder goroutine per declared L4 route during `UpdateRoutes`; on subsequent `UpdateRoutes`, diff old vs new L4 set and start/stop forwarders accordingly. Commit: `feat(ingress): manage L4 forwarder lifecycle on UpdateRoutes`.
+- [X] T030 [US3] Wire L4 forwarder lifecycle into `certmagic_ingress.go` `Run`: launch one forwarder goroutine per declared L4 route during `UpdateRoutes`; on subsequent `UpdateRoutes`, diff old vs new L4 set and start/stop forwarders accordingly. Commit: `feat(ingress): manage L4 forwarder lifecycle on UpdateRoutes`.
 
-- [ ] T031 [US3] Add `tests/e2e/ingress_tcp_test.go` (build tag `e2e`) covering SC-006: deploy `redis:7-alpine` with `[[route]] host = "cache.local" l4 = "tcp" port = 6379`, `redis-cli -h 127.0.0.1 -p 6379 ping` returns `PONG`. Cleanup. Commit: `test(e2e): cover L4 TCP forward to redis (SC-006)`.
+- [X] T031 [US3] Add `tests/e2e/ingress_tcp_test.go` (build tag `e2e`) covering SC-006: deploy `redis:7-alpine` with `[[route]] host = "cache.local" l4 = "tcp" port = 6379`, `redis-cli -h 127.0.0.1 -p 6379 ping` returns `PONG`. Cleanup. Commit: `test(e2e): cover L4 TCP forward to redis (SC-006)`.
 
 **Checkpoint**: SC-006 passes. Non-HTTP workloads exposable.
 
@@ -180,11 +180,11 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Implementation for User Story 4
 
-- [ ] T032 [US4] Modify `internal/probe/manager.go` `probeLoop`: when `spec.Health.Via == "ingress"`, construct `NewHTTPProbe` with URL = `http://127.0.0.1:<httpport><path>` and inject `Host` header = the route's host. New helper `lookupRouteHost(spec)` walks `spec.Routes` and returns the first L7 route's host (errors if none). Pass IngressConfig.HTTPPort to the Manager via `probe.Options{IngressHTTPPort int}` so the loopback URL is constructed correctly. Commit: `feat(probe): route HTTP probes through ingress loopback when Via=ingress`.
+- [X] T032 [US4] Modify `internal/probe/manager.go` `probeLoop`: when `spec.Health.Via == "ingress"`, construct `NewHTTPProbe` with URL = `http://127.0.0.1:<httpport><path>` and inject `Host` header = the route's host. New helper `lookupRouteHost(spec)` walks `spec.Routes` and returns the first L7 route's host (errors if none). Pass IngressConfig.HTTPPort to the Manager via `probe.Options{IngressHTTPPort int}` so the loopback URL is constructed correctly. Commit: `feat(probe): route HTTP probes through ingress loopback when Via=ingress`.
 
-- [ ] T033 [US4] Extend `internal/cli/server.go` `runServer` to pass `IngressHTTPPort` into `probe.Options` so the Manager knows where to dial. Commit: `feat(cli): pass ingress HTTPPort into probe Manager options`.
+- [X] T033 [US4] Extend `internal/cli/server.go` `runServer` to pass `IngressHTTPPort` into `probe.Options` so the Manager knows where to dial. Commit: `feat(cli): pass ingress HTTPPort into probe Manager options`.
 
-- [ ] T034 [US4] Add `tests/e2e/ingress_probe_test.go` (build tag `e2e`) covering SC-007: deploy whoami with `[[route]] host = "whoami.local"` AND `[health].path = "/health" via = "ingress"`. The test does NOT call `skipIfHTTPProbeUnreachable` — it must pass on macOS Docker Desktop too. Assert `proxa ps -j` reports `healthy` within 30s. Commit: `test(e2e): cover HTTP probe via ingress loopback (SC-007)`.
+- [X] T034 [US4] Add `tests/e2e/ingress_probe_test.go` (build tag `e2e`) covering SC-007: deploy whoami with `[[route]] host = "whoami.local"` AND `[health].path = "/health" via = "ingress"`. The test does NOT call `skipIfHTTPProbeUnreachable` — it must pass on macOS Docker Desktop too. Assert `proxa ps -j` reports `healthy` within 30s. Commit: `test(e2e): cover HTTP probe via ingress loopback (SC-007)`.
 
 **Checkpoint**: SC-007 passes. macOS dev story unblocked.
 
@@ -196,9 +196,9 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Implementation for User Story 5
 
-- [ ] T035 [US5] Add `internal/ingress/certmagic_ingress_test.go` covering `Run` with non-privileged ports — start the ingress on `:18080` + `:18443` in a unit test (no Docker, no real backend), connect with a TCP `net.Dial`, assert the listener accepts. Demonstrates SC-008 without needing an unprivileged test user. Commit: `test(ingress): verify non-privileged port binding`.
+- [X] T035 [US5] Add `internal/ingress/certmagic_ingress_test.go` covering `Run` with non-privileged ports — start the ingress on `:18080` + `:18443` in a unit test (no Docker, no real backend), connect with a TCP `net.Dial`, assert the listener accepts. Demonstrates SC-008 without needing an unprivileged test user. Commit: `test(ingress): verify non-privileged port binding`.
 
-- [ ] T036 [US5] Update `docs/operations.md` (create if absent) with the privileged-port story: CAP_NET_BIND_SERVICE on Linux, systemd AmbientCapabilities snippet, or the high-port + external LB pattern. Cross-link from `README.md`. Commit: `docs: document privileged-port options for ingress (CAP_NET_BIND, systemd, high ports)`.
+- [X] T036 [US5] Update `docs/operations.md` (create if absent) with the privileged-port story: CAP_NET_BIND_SERVICE on Linux, systemd AmbientCapabilities snippet, or the high-port + external LB pattern. Cross-link from `README.md`. Commit: `docs: document privileged-port options for ingress (CAP_NET_BIND, systemd, high ports)`.
 
 **Checkpoint**: SC-008 evidence captured.
 
@@ -212,7 +212,7 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Implementation for User Story 6
 
-- [ ] T037 [US6] Add `tests/e2e/ingress_reload_test.go` (build tag `e2e`) covering SC-003: deploy whoami with `[[route]]`, spawn a background goroutine that hits the route every 50ms recording failures; in the foreground re-issue `proxa up` with a modified TOML (toggle `lb_strategy`) at t=2s; let the loop run for 15s total; assert zero failures (no `curl` errors, no 5xx responses). Commit: `test(e2e): cover hot-reload safety under sustained traffic (SC-003)`.
+- [X] T037 [US6] Add `tests/e2e/ingress_reload_test.go` (build tag `e2e`) covering SC-003: deploy whoami with `[[route]]`, spawn a background goroutine that hits the route every 50ms recording failures; in the foreground re-issue `proxa up` with a modified TOML (toggle `lb_strategy`) at t=2s; let the loop run for 15s total; assert zero failures (no `curl` errors, no 5xx responses). Commit: `test(e2e): cover hot-reload safety under sustained traffic (SC-003)`.
 
 **Checkpoint**: SC-003 passes. Live edits during business hours are safe.
 
@@ -220,11 +220,11 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ## Phase 9: Polish & Cross-Cutting
 
-- [ ] T038 [P] Add `internal/ingress/ingress_integration_test.go` (`//go:build dockerd`) that brings up a Pebble container (ghcr.io/letsencrypt/pebble), points `ACMEDirectoryURL` at `https://localhost:14000/dir`, issues a cert for `proxa-test.local`, asserts the cert is present and not expired. Cleanup tears down Pebble. Commit: `test(ingress): cover ACME issuance against Pebble test CA`.
+- [X] T038 [P] Add `internal/ingress/ingress_integration_test.go` (`//go:build dockerd`) that brings up a Pebble container (ghcr.io/letsencrypt/pebble), points `ACMEDirectoryURL` at `https://localhost:14000/dir`, issues a cert for `proxa-test.local`, asserts the cert is present and not expired. Cleanup tears down Pebble. Commit: `test(ingress): cover ACME issuance against Pebble test CA`.
 
-- [ ] T039 Re-run the license audit script from 002's polish phase against the post-003 `go.sum`. Update `docs/licenses.md` with: new direct dep `caddyserver/certmagic` (Apache-2.0), new transitive deps from CertMagic's tree (`mholt/acmez/v3`, `libdns/libdns`, `miekg/dns`, `zeebo/blake3`, etc. — confirm each is Apache-2.0/MIT/BSD/MPL-2.0). Commit: `docs(licenses): refresh transitive license audit for 003-ingress`.
+- [X] T039 Re-run the license audit script from 002's polish phase against the post-003 `go.sum`. Update `docs/licenses.md` with: new direct dep `caddyserver/certmagic` (Apache-2.0), new transitive deps from CertMagic's tree (`mholt/acmez/v3`, `libdns/libdns`, `miekg/dns`, `zeebo/blake3`, etc. — confirm each is Apache-2.0/MIT/BSD/MPL-2.0). Commit: `docs(licenses): refresh transitive license audit for 003-ingress`.
 
-- [ ] T040 Walk `quickstart.md` end-to-end on a clean `${PROXA_DATA_DIR}` (use self-signed mode to avoid Let's Encrypt rate limits). Record outcomes in `specs/003-ingress/validation.md` mirroring the 001 / 002 format: SC-by-SC table with PASS/READY/FAIL + evidence. Document any bugs caught + fixed during validation. Commit: `docs(spec): record quickstart validation results for 003-ingress`.
+- [X] T040 Walk `quickstart.md` end-to-end on a clean `${PROXA_DATA_DIR}` (use self-signed mode to avoid Let's Encrypt rate limits). Record outcomes in `specs/003-ingress/validation.md` mirroring the 001 / 002 format: SC-by-SC table with PASS/READY/FAIL + evidence. Document any bugs caught + fixed during validation. Commit: `docs(spec): record quickstart validation results for 003-ingress`.
 
 **Checkpoint (end of feature)**: All 8 SCs PASS or READY. `git log --oneline 003-ingress ^main` shows one commit per task with constitution-§XI-compliant messages.
 
