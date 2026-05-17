@@ -21,6 +21,21 @@ type Config struct {
 	ListenAddr   string        // unix:///{DataDir}/proxa.sock
 	TickInterval time.Duration // reconciler cadence; 5s default
 	LogLevel     string        // debug | info | warn | error
+	Ingress      IngressConfig // L7/L4 routing layer; see [ingress] block
+}
+
+// IngressConfig holds the server-wide ingress settings. Read from the
+// [ingress] section of config.toml + PROXA_INGRESS_* env vars.
+//
+// Defaults are dev-friendly (non-privileged ports, TLS off). Production
+// operators are expected to set http_port=80, https_port=443, tls=true,
+// email="ops@example.com".
+type IngressConfig struct {
+	HTTPPort         int    // [ingress].http_port; default 8080
+	HTTPSPort        int    // [ingress].https_port; default 8443
+	TLS              bool   // [ingress].tls; default false
+	Email            string // [ingress].email; required when TLS=true for ACME (else self-signed)
+	ACMEDirectoryURL string // [ingress].acme_directory; default Let's Encrypt prod
 }
 
 // Load reads configuration from defaults, ~/.proxa/config.toml, env
@@ -39,6 +54,11 @@ func Load() (*Config, error) {
 	v.SetDefault("listen", defaultListen)
 	v.SetDefault("tick_interval", "5s")
 	v.SetDefault("log_level", "info")
+	v.SetDefault("ingress.http_port", 8080)
+	v.SetDefault("ingress.https_port", 8443)
+	v.SetDefault("ingress.tls", false)
+	v.SetDefault("ingress.email", "")
+	v.SetDefault("ingress.acme_directory", "")
 
 	v.SetConfigName("config")
 	v.SetConfigType("toml")
@@ -68,6 +88,13 @@ func Load() (*Config, error) {
 		ListenAddr:   listen,
 		TickInterval: tick,
 		LogLevel:     v.GetString("log_level"),
+		Ingress: IngressConfig{
+			HTTPPort:         v.GetInt("ingress.http_port"),
+			HTTPSPort:        v.GetInt("ingress.https_port"),
+			TLS:              v.GetBool("ingress.tls"),
+			Email:            v.GetString("ingress.email"),
+			ACMEDirectoryURL: v.GetString("ingress.acme_directory"),
+		},
 	}, nil
 }
 
