@@ -94,7 +94,9 @@ func (r *Reconciler) Run(ctx context.Context) {
 }
 
 // reconcileOnce performs one full reconciliation pass across every
-// project. Errors are logged per-project and per-action.
+// project. Errors are logged per-project and per-action. After the
+// per-project work completes, the full route table is pushed to the
+// ingress as an atomic snapshot (FR-009 + R-003).
 func (r *Reconciler) reconcileOnce(ctx context.Context) {
 	projects, err := r.store.ListProjects(ctx)
 	if err != nil {
@@ -104,6 +106,34 @@ func (r *Reconciler) reconcileOnce(ctx context.Context) {
 
 	for _, p := range projects {
 		r.reconcileProject(ctx, p.Name)
+	}
+
+	if r.ingress != nil {
+		r.pushRoutes(ctx, projects)
+	}
+}
+
+// pushRoutes collects every service's [[route]] declarations across
+// every project and publishes them as a single atomic snapshot to the
+// ingress. Empty maps are valid (means "no routes" → ingress returns
+// 404 for every request).
+func (r *Reconciler) pushRoutes(ctx context.Context, projects []types.Project) {
+	routes := make(map[ingress.ServiceID][]types.Route)
+	for _, p := range projects {
+		services, err := r.store.ListServices(ctx, p.Name)
+		if err != nil {
+			r.logger.Error("list services for route push", "project", p.Name, "err", err)
+			continue
+		}
+		for _, svc := range services {
+			if len(svc.Spec.Routes) == 0 {
+				continue
+			}
+			routes[ingress.ServiceID{Project: p.Name, Service: svc.Name}] = svc.Spec.Routes
+		}
+	}
+	if err := r.ingress.UpdateRoutes(ctx, routes); err != nil {
+		r.logger.Error("ingress: UpdateRoutes rejected", "err", err)
 	}
 }
 
@@ -229,7 +259,7 @@ func (r *Reconciler) updateProbesAndStatus(ctx context.Context, project string, 
 		}
 	}
 
-	// Aggregate + persist Service.Status when it changed.
+	// Aggregate + persist Service.Status when it changed + push backends to ingress.
 	for _, svc := range desired {
 		ids := idsByService[svc.Name]
 		snaps := make([]probe.Snapshot, 0, len(ids))
@@ -239,16 +269,57 @@ func (r *Reconciler) updateProbesAndStatus(ctx context.Context, project string, 
 			}
 		}
 		newStatus := Aggregate(svc.Spec.Replicas, snaps)
-		if newStatus == svc.Status {
-			continue
+		if newStatus != svc.Status {
+			svc.Status = newStatus
+			if err := r.store.PutService(ctx, project, svc); err != nil {
+				r.logger.Error("persist service status", "project", project, "service", svc.Name, "err", err)
+			} else {
+				r.logger.Info("service status changed", "project", project, "service", svc.Name, "status", newStatus)
+			}
 		}
-		svc.Status = newStatus
-		if err := r.store.PutService(ctx, project, svc); err != nil {
-			r.logger.Error("persist service status", "project", project, "service", svc.Name, "err", err)
-			continue
+
+		// Push backends to ingress so it can route requests to this service.
+		if r.ingress != nil && len(svc.Spec.Routes) > 0 {
+			r.pushBackends(ctx, project, svc, ids)
 		}
-		r.logger.Info("service status changed", "project", project, "service", svc.Name, "status", newStatus)
 	}
+}
+
+// pushBackends builds the Backend list for one service from its
+// container IDs (already validated by the snapshot pass above) and
+// publishes it to the ingress.
+func (r *Reconciler) pushBackends(ctx context.Context, project string, svc types.Service, ids []string) {
+	port := backendPort(svc.Spec)
+	backends := make([]ingress.Backend, 0, len(ids))
+	for _, id := range ids {
+		info, err := r.runtime.InspectContainer(ctx, id)
+		if err != nil || info == nil || info.IPAddress == "" {
+			continue // unreachable replica; skip
+		}
+		snap, _ := r.probes.Snapshot(id)
+		backends = append(backends, ingress.Backend{
+			ContainerID: id,
+			IPAddress:   info.IPAddress,
+			Port:        port,
+			Healthy:     snap.HealthOK,
+		})
+	}
+	r.ingress.UpdateBackends(ctx, ingress.ServiceID{Project: project, Service: svc.Name}, backends)
+}
+
+// backendPort picks the container-side port the ingress will dial.
+// Preference order:
+//   1. spec.Health.Port (explicit health port)
+//   2. first spec.Expose entry's Container port
+//   3. 80 (HTTP default)
+func backendPort(spec types.TaskDef) int {
+	if spec.Health.Port > 0 {
+		return spec.Health.Port
+	}
+	if len(spec.Expose) > 0 && spec.Expose[0].Container > 0 {
+		return spec.Expose[0].Container
+	}
+	return 80
 }
 
 // _ keeps types reachable for future test helpers.
