@@ -27,12 +27,18 @@ var (
 	nameRe     = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
 	cpuRe      = regexp.MustCompile(`^\d+m?$`)
 	memoryRe   = regexp.MustCompile(`^\d+(Ki|Mi|Gi)?$`)
+	// hostnameRe rejects leading hyphens, empty labels, trailing dots.
+	// Wildcard ("*.example.com") is intentionally NOT accepted in v0.3.
+	hostnameRe       = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$`)
 	allowedProtocols = map[string]bool{"tcp": true, "udp": true, "http": true, "https": true}
 	allowedStrategies = map[types.DeployStrategy]bool{
 		types.StrategyStartFirst: true,
 		types.StrategyStopFirst:  true,
 		"":                      true, // optional; default applied later
 	}
+	allowedL4         = map[string]bool{"": true, "tcp": true, "udp": true}
+	allowedLB         = map[string]bool{"": true, "random": true, "round-robin": true}
+	allowedHealthVia  = map[string]bool{"": true, "direct": true, "ingress": true}
 )
 
 // Validate checks every rule from contracts/toml-grammar.md and returns
@@ -89,8 +95,69 @@ func Validate(td types.TaskDef) error {
 	if err := validateHealth(td); err != nil {
 		return err
 	}
+	if err := validateRoutes(td); err != nil {
+		return err
+	}
 	// schedule cron validation is shallow in v0.0 — accept any non-empty string;
 	// full cron parser arrives with the scheduler in Feature 002.
+	return nil
+}
+
+// validateRoutes enforces the [[route]] block rules per
+// specs/003-ingress/contracts/route.md:
+//   - L7 (l4 == "") requires non-empty host (route-needs-host)
+//   - host must be a valid DNS name; wildcards rejected (route-bad-host)
+//   - path must start with / and only the trailing * is allowed (route-bad-path)
+//   - l4 ∈ {"", "tcp", "udp"} (route-invalid-protocol)
+//   - L4 requires port 1..65535 (route-needs-port)
+//   - lb_strategy ∈ {"", "random", "round-robin"} (route-bad-lb)
+//
+// Per-project / cross-project (host, path) collision is enforced at
+// proxa-up time via the StateStore-aware ValidateAgainstStore helper
+// (see T005); this function handles only the per-TOML rules.
+func validateRoutes(td types.TaskDef) error {
+	for i, r := range td.Routes {
+		if !allowedL4[r.L4] {
+			return &validationError{Code: "route-invalid-protocol", Message: fmt.Sprintf("route[%d].l4 %q must be tcp|udp or empty for L7", i, r.L4)}
+		}
+		if r.L4 == "" { // L7
+			if r.Host == "" {
+				return &validationError{Code: "route-needs-host", Message: fmt.Sprintf("route[%d] is L7 (l4 unset) and requires host", i)}
+			}
+		} else { // L4
+			if r.Port < 1 || r.Port > 65535 {
+				return &validationError{Code: "route-needs-port", Message: fmt.Sprintf("route[%d].port %d out of 1..65535 for l4=%s", i, r.Port, r.L4)}
+			}
+		}
+		if r.Host != "" && !hostnameRe.MatchString(r.Host) {
+			return &validationError{Code: "route-bad-host", Message: fmt.Sprintf("route[%d].host %q must be a valid DNS name (no wildcards in v0.3)", i, r.Host)}
+		}
+		if err := validateRoutePath(i, r.Path); err != nil {
+			return err
+		}
+		if !allowedLB[r.LBStrategy] {
+			return &validationError{Code: "route-bad-lb", Message: fmt.Sprintf("route[%d].lb_strategy %q must be random|round-robin or empty", i, r.LBStrategy)}
+		}
+	}
+	return nil
+}
+
+func validateRoutePath(i int, p string) error {
+	if p == "" {
+		return nil
+	}
+	if p[0] != '/' {
+		return &validationError{Code: "route-bad-path", Message: fmt.Sprintf("route[%d].path %q must start with /", i, p)}
+	}
+	// Only one trailing * is allowed; reject any other use of *.
+	for j := 0; j < len(p); j++ {
+		if p[j] != '*' {
+			continue
+		}
+		if j != len(p)-1 {
+			return &validationError{Code: "route-bad-path", Message: fmt.Sprintf("route[%d].path %q: * is only allowed as the last character", i, p)}
+		}
+	}
 	return nil
 }
 
@@ -133,6 +200,12 @@ func validateHealth(td types.TaskDef) error {
 		return &validationError{
 			Code:    "health-retries-out-of-range",
 			Message: fmt.Sprintf("health.retries %d must be in 1..100 (or 0 for default)", h.Retries),
+		}
+	}
+	if !allowedHealthVia[h.Via] {
+		return &validationError{
+			Code:    "health-bad-via",
+			Message: fmt.Sprintf("health.via %q must be direct|ingress or empty", h.Via),
 		}
 	}
 	return nil
