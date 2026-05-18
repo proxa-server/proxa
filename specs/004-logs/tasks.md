@@ -174,9 +174,9 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ## Phase 8: Polish & Cross-Cutting
 
-- [ ] T027 Re-run the license audit from 003's polish phase against the post-004 `go.sum`. Expected: NO change (this feature added zero direct deps, zero new transitives). Update `docs/licenses.md` Refresh log with a one-line entry noting "feature 004 logs: no go.sum churn — stdlib + already-imported docker/docker only". Commit: `docs(licenses): refresh transitive license audit for 004-logs (no-op confirmation)`.
+- [X] T027 Re-run the license audit from 003's polish phase against the post-004 `go.sum`. Expected: NO change (this feature added zero direct deps, zero new transitives). Update `docs/licenses.md` Refresh log with a one-line entry noting "feature 004 logs: no go.sum churn — stdlib + already-imported docker/docker only". Commit: `docs(licenses): refresh transitive license audit for 004-logs (no-op confirmation)`.
 
-- [ ] T028 Walk `quickstart.md` end-to-end on a clean `${PROXA_DATA_DIR}` against a local proxa server. Record outcomes in `specs/004-logs/validation.md` mirroring the 001 / 002 / 003 format: SC-by-SC table with PASS/READY/FAIL + evidence. Document any bugs caught + fixed during validation. Commit: `docs(spec): record quickstart validation results for 004-logs`.
+- [X] T028 Walk `quickstart.md` end-to-end on a clean `${PROXA_DATA_DIR}` against a local proxa server. Record outcomes in `specs/004-logs/validation.md` mirroring the 001 / 002 / 003 format: SC-by-SC table with PASS/READY/FAIL + evidence. Document any bugs caught + fixed during validation. Commit: `docs(spec): record quickstart validation results for 004-logs`.
 
 **Checkpoint (end of feature)**: All 8 SCs PASS or READY. `git log --oneline 004-logs ^main` shows one commit per task with constitution-§XI-compliant messages.
 
