@@ -146,13 +146,13 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Implementation for User Story 4
 
-- [ ] T021 [US4] Add `parseSinceFlag(raw string) (time.Time, error)` helper to `internal/cli/logs.go`. Parses Go duration strings (`5m`, `1h30m`, `48h`), returns `time.Now().Add(-d)`. Rejects negative durations + non-parseable inputs with explicit error message including the original input. Commit: `feat(cli): add parseSinceFlag duration helper for proxa logs --since`.
+- [X] T021 [US4] Add `parseSinceFlag(raw string) (time.Time, error)` helper to `internal/cli/logs.go`. Parses Go duration strings (`5m`, `1h30m`, `48h`), returns `time.Now().Add(-d)`. Rejects negative durations + non-parseable inputs with explicit error message including the original input. Commit: `feat(cli): add parseSinceFlag duration helper for proxa logs --since`.
 
-- [ ] T022 [US4] [P] Add `internal/cli/logs_since_test.go` table: valid (`5m`, `1h30m`, `1h`, `60s` → expected delta), invalid (`broken`, `5`, `-1m`, empty → error code 2 with message containing the input). Commit: `test(cli): cover parseSinceFlag duration parsing`.
+- [X] T022 [US4] [P] Add `internal/cli/logs_since_test.go` table: valid (`5m`, `1h30m`, `1h`, `60s` → expected delta), invalid (`broken`, `5`, `-1m`, empty → error code 2 with message containing the input). Commit: `test(cli): cover parseSinceFlag duration parsing`.
 
-- [ ] T023 [US4] Wire `--since` in `proxa logs` CLI → query param `?since=<RFC3339>`; server-side query parser in `handleStreamServiceLogs` (T008 already validates `invalid-since`) MUST construct `time.Time` from RFC3339 and pass into `runtime.LogOpts.Since`. Commit: `feat(server,cli): plumb --since duration into Runtime.LogOpts.Since`.
+- [X] T023 [US4] Wire `--since` in `proxa logs` CLI → query param `?since=<RFC3339>`; server-side query parser in `handleStreamServiceLogs` (T008 already validates `invalid-since`) MUST construct `time.Time` from RFC3339 and pass into `runtime.LogOpts.Since`. Commit: `feat(server,cli): plumb --since duration into Runtime.LogOpts.Since`.
 
-- [ ] T024 [US4] Add `tests/e2e/logs_since_test.go` (build tag `e2e`) covering SC-004-adjacent: deploy whoami, generate one log line, sleep 5s, generate another, `proxa logs <svc> --since 3s` → assert only the second line appears. Commit: `test(e2e): cover --since filter window (US4)`.
+- [X] T024 [US4] Add `tests/e2e/logs_since_test.go` (build tag `e2e`) covering SC-004-adjacent: deploy whoami, generate one log line, sleep 5s, generate another, `proxa logs <svc> --since 3s` → assert only the second line appears. Commit: `test(e2e): cover --since filter window (US4)`.
 
 **Checkpoint**: US4 done. Time-window debug is straightforward.
 
@@ -164,9 +164,9 @@ One commit per task. Message format: `<type>(<scope>): <description>`.
 
 ### Implementation for User Story 5
 
-- [ ] T025 [US5] Verify (and extend if needed) `internal/cli/logs.go` to pass `?replica=N` query param when `--replica N` is non-zero (default 0). Server-side replica resolution already covers this from T008. Add one validation case in `logs_test.go`: `--replica -1` → exit 2 + "must be >= 0". Commit: `feat(cli): wire --replica flag into proxa logs query`.
+- [X] T025 [US5] Verify (and extend if needed) `internal/cli/logs.go` to pass `?replica=N` query param when `--replica N` is non-zero (default 0). Server-side replica resolution already covers this from T008. Add one validation case in `logs_test.go`: `--replica -1` → exit 2 + "must be >= 0". Commit: `feat(cli): wire --replica flag into proxa logs query`.
 
-- [ ] T026 [US5] Add `tests/e2e/logs_replica_test.go` (build tag `e2e`) covering SC-005: deploy a service with `replicas = 3` and host ports per replica (use `host = 18091 + i`-style), `proxa logs <svc> --replica 1 --tail 5` → assert stderr meta header mentions `proxa-default-<svc>-1 (replica 1)`. Also assert `--replica 99` exits non-zero with `replica 99 not found (service has 3 replicas)`. Skip on macOS Docker Desktop (multi-replica + bridge IPs — same limitation as 002 SC-002-4); covered on Linux CI. Commit: `test(e2e): cover --replica pick and out-of-range error (SC-005)`.
+- [X] T026 [US5] Add `tests/e2e/logs_replica_test.go` (build tag `e2e`) covering SC-005: deploy a service with `replicas = 3` and host ports per replica (use `host = 18091 + i`-style), `proxa logs <svc> --replica 1 --tail 5` → assert stderr meta header mentions `proxa-default-<svc>-1 (replica 1)`. Also assert `--replica 99` exits non-zero with `replica 99 not found (service has 3 replicas)`. Skip on macOS Docker Desktop (multi-replica + bridge IPs — same limitation as 002 SC-002-4); covered on Linux CI. Commit: `test(e2e): cover --replica pick and out-of-range error (SC-005)`.
 
 **Checkpoint**: US5 done. Multi-replica debugging works (Linux CI).
 
