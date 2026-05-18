@@ -168,10 +168,14 @@ func cliFlagErr(err error) error { return err }
 
 // isContextCancel reports whether the error came from the parent ctx
 // cancelling (Ctrl-C). HTTP body read returns various flavors of
-// "use of closed network connection" depending on the transport.
+// "use of closed network connection" depending on the transport;
+// signal.NotifyContext surfaces as "interrupt signal received".
 func isContextCancel(err error) bool {
 	s := err.Error()
 	return strings.Contains(s, "context canceled") ||
 		strings.Contains(s, "use of closed network connection") ||
-		strings.Contains(s, "operation was canceled")
+		strings.Contains(s, "operation was canceled") ||
+		strings.Contains(s, "interrupt signal received") ||
+		strings.Contains(s, "signal received") ||
+		strings.Contains(s, "signal: interrupt")
 }
