@@ -33,7 +33,7 @@ func TestHTTPProbeHealthy(t *testing.T) {
 	defer srv.Close()
 
 	host, port := hostPort(t, srv)
-	p := NewHTTPProbe(host, port, "/", 1*time.Second)
+	p := NewHTTPProbe(host, port, "/", 1*time.Second, nil)
 
 	r := p.Run(context.Background())
 	if !r.Healthy {
@@ -50,7 +50,7 @@ func TestHTTPProbeUnhealthyStatus(t *testing.T) {
 	}))
 	defer srv.Close()
 	host, port := hostPort(t, srv)
-	p := NewHTTPProbe(host, port, "/", 1*time.Second)
+	p := NewHTTPProbe(host, port, "/", 1*time.Second, nil)
 
 	r := p.Run(context.Background())
 	if r.Healthy {
@@ -71,7 +71,7 @@ func TestHTTPProbeTimeout(t *testing.T) {
 	}))
 	defer srv.Close()
 	host, port := hostPort(t, srv)
-	p := NewHTTPProbe(host, port, "/", 100*time.Millisecond)
+	p := NewHTTPProbe(host, port, "/", 100*time.Millisecond, nil)
 
 	r := p.Run(context.Background())
 	if r.Healthy {
@@ -88,7 +88,7 @@ func TestHTTPProbeCtxCancel(t *testing.T) {
 	}))
 	defer srv.Close()
 	host, port := hostPort(t, srv)
-	p := NewHTTPProbe(host, port, "/", 5*time.Second)
+	p := NewHTTPProbe(host, port, "/", 5*time.Second, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // immediately cancel

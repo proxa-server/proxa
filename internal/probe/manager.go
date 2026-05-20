@@ -250,7 +250,12 @@ func (m *Manager) probeLoop(ctx context.Context, id string, spec types.TaskDef, 
 				m.log.Error("probe: Health.Via=ingress but no [[route]] declared", "container", id)
 				return
 			}
-			httpProbe = NewHTTPProbeViaIngress(m.ingressHTTPPort, host, spec.Health.Path, timeout)
+			ing := IngressInfo{
+				HTTPPort:   m.ingressHTTPPort,
+				HTTPSPort:  m.ingressHTTPSPort,
+				TLSEnabled: m.ingressTLSEnabled,
+			}
+			httpProbe = NewHTTPProbeViaIngress(ing, host, spec.Health.Path, timeout, spec.Health.FollowRedirects)
 		} else {
 			info, err := m.rt.InspectContainer(ctx, id)
 			if err != nil {
@@ -261,7 +266,7 @@ func (m *Manager) probeLoop(ctx context.Context, id string, spec types.TaskDef, 
 			if port == 0 && len(spec.Expose) > 0 {
 				port = spec.Expose[0].Container
 			}
-			httpProbe = NewHTTPProbe(info.IPAddress, port, spec.Health.Path, timeout)
+			httpProbe = NewHTTPProbe(info.IPAddress, port, spec.Health.Path, timeout, spec.Health.FollowRedirects)
 		}
 	}
 	if len(spec.Health.Command) > 0 {
