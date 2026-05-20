@@ -38,6 +38,13 @@ type Manager struct {
 	// direct bridge-IP dial.
 	ingressHTTPPort int
 
+	// ingressHTTPSPort is the loopback HTTPS port. When ingressTLSEnabled
+	// is true and a via-ingress probe has no explicit FollowRedirects
+	// override, the probe targets this port directly (instead of HTTP)
+	// to avoid the 0.4.0 redirect/cert collision. Set via Options.
+	ingressHTTPSPort  int
+	ingressTLSEnabled bool
+
 	mu      sync.Mutex
 	entries map[string]*entry
 
@@ -50,7 +57,21 @@ type Manager struct {
 // Options carries optional Manager configuration. Empty value yields
 // v0.2 behavior (HTTPProbes always dial the bridge IP).
 type Options struct {
+	// IngressHTTPPort is the loopback HTTP port HTTPProbes target when
+	// a service opts into spec.Health.Via == "ingress". Zero disables
+	// the ingress path.
 	IngressHTTPPort int
+
+	// IngressHTTPSPort is the loopback HTTPS port. Used together with
+	// IngressTLSEnabled by the v0.4.1 fix for probes against
+	// TLS-enabled ingress.
+	IngressHTTPSPort int
+
+	// IngressTLSEnabled mirrors [ingress].tls. When true and a via-
+	// ingress probe has no explicit follow_redirects override, the
+	// probe targets IngressHTTPSPort directly to avoid the redirect
+	// loop that broke probes in v0.4.0.
+	IngressTLSEnabled bool
 }
 
 type entry struct {
@@ -74,12 +95,14 @@ func NewWithOptions(rt runtime.Runtime, log *slog.Logger, opts Options) *Manager
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Manager{
-		rt:              rt,
-		log:             log,
-		ingressHTTPPort: opts.IngressHTTPPort,
-		entries:         make(map[string]*entry),
-		mgrCtx:          ctx,
-		mgrCancel:       cancel,
+		rt:                rt,
+		log:               log,
+		ingressHTTPPort:   opts.IngressHTTPPort,
+		ingressHTTPSPort:  opts.IngressHTTPSPort,
+		ingressTLSEnabled: opts.IngressTLSEnabled,
+		entries:           make(map[string]*entry),
+		mgrCtx:            ctx,
+		mgrCancel:         cancel,
 	}
 }
 
