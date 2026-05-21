@@ -98,11 +98,6 @@ func TestHTTPProbeCtxCancel(t *testing.T) {
 	}
 }
 
-// boolPtr is a tiny helper for FollowRedirects test cases.
-//
-//go:fix inline
-func boolPtr(b bool) *bool { return new(b) }
-
 // TestHTTPProbeFollowRedirects covers the FollowRedirects tri-state on
 // the direct probe path: nil = Go default (follow), *true = same,
 // *false = treat first 3xx as non-2xx (probe fails).

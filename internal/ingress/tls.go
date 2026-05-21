@@ -180,13 +180,6 @@ func (p *tlsProvider) CertInfo(host string) (CertInfo, bool) {
 	return CertInfo{Host: host, Status: CertStatusPending}, true
 }
 
-// recordCertResult updates the cache when an ACME attempt completes.
-func (p *tlsProvider) recordCertResult(host string, info CertInfo) {
-	p.mu.Lock()
-	p.certCache[host] = info
-	p.mu.Unlock()
-}
-
 // CertCount returns the number of hostnames with a known cert state.
 func (p *tlsProvider) CertCount() int {
 	if !p.cfg.TLS {
