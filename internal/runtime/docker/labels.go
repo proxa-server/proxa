@@ -13,6 +13,7 @@ package docker
 
 import (
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/proxa-server/proxa/internal/runtime"
@@ -35,9 +36,7 @@ const (
 // always overwritten with authoritative values).
 func BuildContainerLabels(spec runtime.ContainerSpec, replica int, specHash, nodeID string) map[string]string {
 	out := map[string]string{}
-	for k, v := range spec.Labels {
-		out[k] = v
-	}
+	maps.Copy(out, spec.Labels)
 	out[LabelManaged] = "true"
 	out[LabelProject] = spec.Labels[LabelProject] // set by reconciler in spec.Labels
 	out[LabelService] = spec.Labels[LabelService]
