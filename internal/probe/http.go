@@ -41,13 +41,19 @@ type IngressInfo struct {
 // it does NOT propagate to any other client in the codebase, and
 // applies only to the probe's loopback target (127.0.0.1:<ingress>).
 //
+// tlsServerName overrides TLS SNI on the handshake. For via-ingress
+// HTTPS probes this MUST be the route host (e.g. "whoami.local") so
+// CertMagic issues / serves the cert keyed on the operator-declared
+// hostname, not on "127.0.0.1". Empty string uses the Go default
+// (derived from req.URL.Host).
+//
 // followRedirects controls the client's CheckRedirect:
 //
 //	nil          → Go default (follow up to 10).
 //	*true        → same as nil.
 //	*false       → return http.ErrUseLastResponse on the first 3xx,
 //	               so the caller observes the redirect status directly.
-func newProbeClient(timeout time.Duration, insecureSkipVerify bool, followRedirects *bool) *http.Client {
+func newProbeClient(timeout time.Duration, insecureSkipVerify bool, tlsServerName string, followRedirects *bool) *http.Client {
 	c := &http.Client{
 		Timeout: timeout,
 		Transport: &http.Transport{
@@ -62,6 +68,7 @@ func newProbeClient(timeout time.Duration, insecureSkipVerify bool, followRedire
 				// Real operator traffic still validates the cert normally;
 				// this skip is bounded to *this* probe client instance.
 				InsecureSkipVerify: insecureSkipVerify, //nolint:gosec // see comment above
+				ServerName:         tlsServerName,
 			},
 		},
 	}
@@ -96,16 +103,21 @@ func NewHTTPProbeViaIngress(ing IngressInfo, routeHost, path string, timeout tim
 	scheme := "http"
 	port := ing.HTTPPort
 	insecureSkipVerify := false
+	tlsServerName := ""
 
 	// The v0.4.1 fix: when ingress is TLS-enabled and the operator
 	// did not explicitly override redirect behavior, probe the HTTPS
 	// port directly. Real traffic terminates TLS at the ingress, so
 	// the probe is asserting the same thing real traffic asserts:
 	// "does the upstream return 2xx when reached through ingress?".
+	//
+	// TLS SNI MUST be routeHost (not 127.0.0.1) so CertMagic issues /
+	// serves the cert for the operator-declared hostname.
 	if ing.TLSEnabled && followRedirects == nil && ing.HTTPSPort > 0 {
 		scheme = "https"
 		port = ing.HTTPSPort
 		insecureSkipVerify = true
+		tlsServerName = routeHost
 	}
 
 	url := fmt.Sprintf("%s://127.0.0.1:%d%s", scheme, port, path)
@@ -113,7 +125,7 @@ func NewHTTPProbeViaIngress(ing IngressInfo, routeHost, path string, timeout tim
 		URL:     url,
 		Host:    routeHost,
 		Timeout: timeout,
-		client:  newProbeClient(timeout, insecureSkipVerify, followRedirects),
+		client:  newProbeClient(timeout, insecureSkipVerify, tlsServerName, followRedirects),
 	}
 }
 
@@ -136,7 +148,7 @@ func NewHTTPProbe(containerIP string, port int, path string, timeout time.Durati
 	return &HTTPProbe{
 		URL:     url,
 		Timeout: timeout,
-		client:  newProbeClient(timeout, false, followRedirects),
+		client:  newProbeClient(timeout, false, "", followRedirects),
 	}
 }
 
