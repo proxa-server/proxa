@@ -165,8 +165,7 @@ func (m *Manager) Track(containerID string, spec types.TaskDef) error {
 	m.entries[containerID] = e
 	m.mu.Unlock()
 
-	m.wg.Add(1)
-	go m.probeLoop(ctx, containerID, spec, e)
+	m.wg.Go(func() { m.probeLoop(ctx, containerID, spec, e) })
 	return nil
 }
 
@@ -218,8 +217,8 @@ func (m *Manager) Snapshot(containerID string) (Snapshot, bool) {
 }
 
 // probeLoop runs one container's probe goroutine. Exits on ctx cancel.
+// Scheduled via sync.WaitGroup.Go (Go 1.25) — no manual Add/Done pair.
 func (m *Manager) probeLoop(ctx context.Context, id string, spec types.TaskDef, e *entry) {
-	defer m.wg.Done()
 	defer close(e.done)
 
 	interval := spec.Health.Interval
