@@ -167,11 +167,11 @@ Single Go module rooted at the repo. `internal/` holds private packages. `tests/
   - **Commit**: `refactor(<pkg>): adopt slices.X helpers where they replace hand-rolled patterns`
   - (Multiple commits permitted, one per package touched.)
 
-- [ ] T027 [US4] Run `go fix ./...` modernizers (Go 1.26) on a scratch worktree, review per-package diff per the R-004 triage rules, then commit accepted changes per package. Each accepted package gets one commit with the per-package diff. Any modernizer NOT accepted gets documented in T028.
+- [X] T027 [US4] Run `go fix ./...` modernizers (Go 1.26) on a scratch worktree, review per-package diff per the R-004 triage rules, then commit accepted changes per package. Each accepted package gets one commit with the per-package diff. Any modernizer NOT accepted gets documented in T028.
   - **Commit**: `refactor(<pkg>): apply go fix modernizers (range-over-int / errors.Join / etc.)`
   - (Multiple commits permitted, one per package whose diff is accepted.)
 
-- [ ] T028 [US4] Create `docs/decisions/0005-deferred-modernizers.md` ADR listing every `go fix` modernizer NOT taken in T027, with a one-line rationale and target release per item. Also record the verification findings: `math/rand` v1 imports = 0, `runtime.SetFinalizer` calls = 0 (no migration needed for these per the pre-survey).
+- [X] T028 [US4] Create `docs/decisions/0005-deferred-modernizers.md` ADR listing every `go fix` modernizer NOT taken in T027, with a one-line rationale and target release per item. Also record the verification findings: `math/rand` v1 imports = 0, `runtime.SetFinalizer` calls = 0 (no migration needed for these per the pre-survey).
   - **Commit**: `docs(decisions): record deferred modernizers and verification findings (ADR-0005)`
 
 **Checkpoint**: After T028, run `make lint && go fix ./... && git diff --quiet` (no diff = no further auto-modernizations remain). US4 deliverable: codebase reads as modern Go 1.26.
@@ -186,16 +186,16 @@ Single Go module rooted at the repo. `internal/` holds private packages. `tests/
 
 **Maps to**: spec FR-012, SC-006; research R-006.
 
-- [ ] T029 [US5] Add `tool` directive to `go.mod` for `honnef.co/go/tools/cmd/staticcheck` — `go get -tool honnef.co/go/tools/cmd/staticcheck@v0.7.0`; verify `go mod tidy` round-trip stable and `go tool staticcheck -version` works.
+- [X] T029 [US5] Add `tool` directive to `go.mod` for `honnef.co/go/tools/cmd/staticcheck` — `go get -tool honnef.co/go/tools/cmd/staticcheck@v0.7.0`; verify `go mod tidy` round-trip stable and `go tool staticcheck -version` works.
   - **Commit**: `chore(deps): pin staticcheck via go.mod tool directive`
 
-- [ ] T030 [US5] Update `Makefile` `lint` target to invoke `go tool staticcheck ./...` instead of `go run $(STATICCHECK) ./...`; keep the `STATICCHECK` variable for backward compatibility (set to the same value) so external tooling that reads it doesn't break. Verify `make lint` still works on a fresh clone.
+- [X] T030 [US5] Update `Makefile` `lint` target to invoke `go tool staticcheck ./...` instead of `go run $(STATICCHECK) ./...`; keep the `STATICCHECK` variable for backward compatibility (set to the same value) so external tooling that reads it doesn't break. Verify `make lint` still works on a fresh clone.
   - **Commit**: `chore(make): use go tool staticcheck for reproducible lint invocation`
 
-- [ ] T031 [US5] Update `docs/operations.md` with two short sections: (a) the new `go tool staticcheck` invocation pattern (1 paragraph); (b) container-aware GOMAXPROCS verification — how to check `proxa system info` confirms `gomaxprocs_source == "container_limit"` when running inside a CPU-limited container (1 paragraph).
+- [X] T031 [US5] Update `docs/operations.md` with two short sections: (a) the new `go tool staticcheck` invocation pattern (1 paragraph); (b) container-aware GOMAXPROCS verification — how to check `proxa system info` confirms `gomaxprocs_source == "container_limit"` when running inside a CPU-limited container (1 paragraph).
   - **Commit**: `docs(operations): document go tool staticcheck and container-aware GOMAXPROCS verification`
 
-- [ ] T032 [US5] End-to-end test `tests/e2e/tool_directive_test.go` for fresh-clone lint reproducibility — `os.MkdirTemp` a scratch dir, copy the repo into it (skip `.git/`), run `go mod download && go tool staticcheck -version` from the temp dir using a fresh `GOMODCACHE`; assert exit 0 and output contains `staticcheck`. Tag `//go:build e2e`. Skip if `go` is not on PATH.
+- [X] T032 [US5] End-to-end test `tests/e2e/tool_directive_test.go` for fresh-clone lint reproducibility — `os.MkdirTemp` a scratch dir, copy the repo into it (skip `.git/`), run `go mod download && go tool staticcheck -version` from the temp dir using a fresh `GOMODCACHE`; assert exit 0 and output contains `staticcheck`. Tag `//go:build e2e`. Skip if `go` is not on PATH.
   - **Commit**: `test(e2e): cover fresh-clone go tool staticcheck reproducibility (SC-006)`
 
 **Checkpoint**: After T032, US5 deliverable: contributors run `make lint` on a fresh clone with no `go install` step.
@@ -206,13 +206,13 @@ Single Go module rooted at the repo. `internal/` holds private packages. `tests/
 
 **Purpose**: Decision records, license refresh, and validation report. Lands at the very end so the validation table reflects the complete state.
 
-- [ ] T033 Create `docs/decisions/0004-router.md` ADR — Status: Accepted. Context: chi router is in use; Go 1.22 `net/http.ServeMux` now supports method+path patterns. Decision: keep chi until v1.0; document the stdlib alternative for future reconsideration. Consequences: ~300 LOC mechanical conversion deferred; one dependency stays in `go.mod` until v1.0.
+- [X] T033 Create `docs/decisions/0004-router.md` ADR — Status: Accepted. Context: chi router is in use; Go 1.22 `net/http.ServeMux` now supports method+path patterns. Decision: keep chi until v1.0; document the stdlib alternative for future reconsideration. Consequences: ~300 LOC mechanical conversion deferred; one dependency stays in `go.mod` until v1.0.
   - **Commit**: `docs(decisions): record keep-chi-until-v1.0 router decision (ADR-0004)`
 
-- [ ] T034 Refresh `docs/licenses.md` with a 2026-05-20 log entry confirming no-op dependency audit for the 005-modern-go feature (zero new third-party deps added; matches the 004-logs no-op refresh pattern).
+- [X] T034 Refresh `docs/licenses.md` with a 2026-05-20 log entry confirming no-op dependency audit for the 005-modern-go feature (zero new third-party deps added; matches the 004-logs no-op refresh pattern).
   - **Commit**: `docs(licenses): refresh transitive license audit for 005-modern-go (no-op confirmation)`
 
-- [ ] T035 Create `specs/005-modern-go/validation.md` with SC-by-SC PASS/FAIL table covering SC-001..SC-010; for each criterion, record the test that validated it (unit / e2e file + test name) or the manual verification step (quickstart section #). Include the audit findings: `math/rand` v1 = 0, `runtime.SetFinalizer` = 0, `go fix` second run = no-op (per T028). Note any deferred items per `0005-deferred-modernizers.md`.
+- [X] T035 Create `specs/005-modern-go/validation.md` with SC-by-SC PASS/FAIL table covering SC-001..SC-010; for each criterion, record the test that validated it (unit / e2e file + test name) or the manual verification step (quickstart section #). Include the audit findings: `math/rand` v1 = 0, `runtime.SetFinalizer` = 0, `go fix` second run = no-op (per T028). Note any deferred items per `0005-deferred-modernizers.md`.
   - **Commit**: `docs(spec): record validation results for 005-modern-go with SC-by-SC table`
 
 ---
