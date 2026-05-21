@@ -101,7 +101,4 @@ func (r *Runtime) Stats(ctx context.Context, id string) (*runtime.ContainerStats
 	return nil, ErrNotImplemented
 }
 
-// StreamLogs is unimplemented in v0.1.x.
-func (r *Runtime) StreamLogs(ctx context.Context, id string, opts runtime.LogOpts) (io.ReadCloser, error) {
-	return nil, ErrNotImplemented
-}
+// StreamLogs lives in logs.go (feature 004).

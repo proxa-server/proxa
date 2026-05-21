@@ -19,6 +19,7 @@
         <th>Desired</th>
         <th>Actual</th>
         <th>Status</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
@@ -42,6 +43,7 @@
                 <span class="chip chip-neutral">● {{.Status}}</span>
               {{- end -}}
             </td>
+            <td><a class="chip chip-neutral" title="View logs" href="/ui/logs/{{$project}}/{{.Name}}">📜 logs</a></td>
           </tr>
         {{- end -}}
       {{- end -}}

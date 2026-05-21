@@ -19,6 +19,7 @@
         <th>Service</th>
         <th>TLS</th>
         <th>Backends</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
@@ -42,6 +43,7 @@
               {{- end -}}
             </td>
             <td class="svc-replicas">{{.BackendCount}}</td>
+            <td><a class="chip chip-neutral" title="View logs" href="/ui/logs/{{.Project}}/{{.Service}}">📜 logs</a></td>
           </tr>
       {{- end -}}
     </tbody>

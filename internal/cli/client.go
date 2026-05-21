@@ -83,6 +83,28 @@ func (c *Client) do(ctx context.Context, method, path string, body any) (*http.R
 	return resp, nil
 }
 
+// doStream is like do() but uses a no-timeout http.Client suitable for
+// long-lived streaming responses (proxa logs --follow). The caller is
+// expected to ctx-cancel to terminate the stream.
+func (c *Client) doStream(ctx context.Context, method, path string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL()+path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("cli: new request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.token)
+
+	// Build a streaming client by cloning the existing client's
+	// transport but with no Timeout. (Setting Timeout on the per-request
+	// http.Client kills long-lived responses, but the existing dialer +
+	// transport — including the unix-socket dialer — must be preserved.)
+	streamClient := &http.Client{Transport: c.http.Transport}
+	resp, err := streamClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("cli: cannot reach proxa server at %s: %w", c.listenAddr, err)
+	}
+	return resp, nil
+}
+
 func requestBody(b *bytes.Reader) *bytes.Reader {
 	if b == nil {
 		return bytes.NewReader(nil)
