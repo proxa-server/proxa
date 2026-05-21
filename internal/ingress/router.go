@@ -2,7 +2,8 @@ package ingress
 
 import (
 	"fmt"
-	"sort"
+	"cmp"
+	"slices"
 	"strings"
 
 	"github.com/proxa-server/proxa/pkg/types"
@@ -143,23 +144,25 @@ func BuildRouter(routes map[ServiceID][]types.Route) (*Router, error) {
 
 	// Sort longest-prefix first so LookupL7 picks the most specific match.
 	// Exact paths (no trailing *) outrank wildcard paths of the same length.
-	sort.Slice(r.l7Routes, func(i, j int) bool {
-		a, b := r.l7Routes[i], r.l7Routes[j]
+	slices.SortFunc(r.l7Routes, func(a, b l7Route) int {
 		la, lb := len(a.PathGlob), len(b.PathGlob)
 		if la != lb {
-			return la > lb
+			return cmp.Compare(lb, la) // longest first
 		}
 		// Exact > wildcard at equal length.
 		aw := strings.HasSuffix(a.PathGlob, "*")
 		bw := strings.HasSuffix(b.PathGlob, "*")
 		if aw != bw {
-			return !aw
+			if !aw {
+				return -1 // exact (a) before wildcard (b)
+			}
+			return 1
 		}
 		// Deterministic tiebreaker by host then path.
-		if a.Host != b.Host {
-			return a.Host < b.Host
+		if c := cmp.Compare(a.Host, b.Host); c != 0 {
+			return c
 		}
-		return a.PathGlob < b.PathGlob
+		return cmp.Compare(a.PathGlob, b.PathGlob)
 	})
 
 	return r, nil
