@@ -265,9 +265,6 @@ func probeDeadlineFor(h types.HealthCheck) time.Duration {
 	if retries <= 0 {
 		retries = 3
 	}
-	d := interval * time.Duration(retries+1)
-	if d < 10*time.Second {
-		d = 10 * time.Second
-	}
+	d := max(interval*time.Duration(retries+1), 10*time.Second)
 	return d
 }

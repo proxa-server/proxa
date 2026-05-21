@@ -74,7 +74,7 @@ type StateStore interface {
 // Tx is the transaction handle passed to [StateStore.Tx]'s callback.
 // Implementations MAY add type-specific helpers; the minimum surface
 // mirrors StateStore's read/write methods.
-type Tx interface{}
+type Tx any
 
 // ServiceEvent is one notification from [StateStore.WatchServices].
 type ServiceEvent struct {
@@ -103,15 +103,17 @@ type noopStore struct{}
 // Compile-time assertion that noopStore satisfies StateStore.
 var _ StateStore = noopStore{}
 
-func (noopStore) Open(context.Context, string) error      { return ErrNotImplemented }
-func (noopStore) Close() error                            { return ErrNotImplemented }
-func (noopStore) Migrate(context.Context) error           { return ErrNotImplemented }
+func (noopStore) Open(context.Context, string) error                 { return ErrNotImplemented }
+func (noopStore) Close() error                                       { return ErrNotImplemented }
+func (noopStore) Migrate(context.Context) error                      { return ErrNotImplemented }
 func (noopStore) CreateProject(context.Context, types.Project) error { return ErrNotImplemented }
 func (noopStore) GetProject(context.Context, string) (*types.Project, error) {
 	return nil, ErrNotImplemented
 }
-func (noopStore) ListProjects(context.Context) ([]types.Project, error) { return nil, ErrNotImplemented }
-func (noopStore) DeleteProject(context.Context, string) error           { return ErrNotImplemented }
+func (noopStore) ListProjects(context.Context) ([]types.Project, error) {
+	return nil, ErrNotImplemented
+}
+func (noopStore) DeleteProject(context.Context, string) error { return ErrNotImplemented }
 func (noopStore) PutService(context.Context, string, types.Service) error {
 	return ErrNotImplemented
 }
@@ -132,17 +134,19 @@ func (noopStore) GetJob(context.Context, string, string) (*types.Job, error) {
 func (noopStore) ListJobs(context.Context, string) ([]types.Job, error) {
 	return nil, ErrNotImplemented
 }
-func (noopStore) DeleteJob(context.Context, string, string) error            { return ErrNotImplemented }
-func (noopStore) PutNode(context.Context, types.Node) error                  { return ErrNotImplemented }
-func (noopStore) GetNode(context.Context, string) (*types.Node, error)       { return nil, ErrNotImplemented }
-func (noopStore) ListNodes(context.Context) ([]types.Node, error)            { return nil, ErrNotImplemented }
-func (noopStore) DeleteNode(context.Context, string) error                   { return ErrNotImplemented }
-func (noopStore) Heartbeat(context.Context, string, time.Time) error         { return ErrNotImplemented }
-func (noopStore) PutSubject(context.Context, types.Subject) error            { return ErrNotImplemented }
-func (noopStore) GetSubject(context.Context, string) (*types.Subject, error) { return nil, ErrNotImplemented }
-func (noopStore) PutPolicy(context.Context, types.Policy) error              { return ErrNotImplemented }
+func (noopStore) DeleteJob(context.Context, string, string) error      { return ErrNotImplemented }
+func (noopStore) PutNode(context.Context, types.Node) error            { return ErrNotImplemented }
+func (noopStore) GetNode(context.Context, string) (*types.Node, error) { return nil, ErrNotImplemented }
+func (noopStore) ListNodes(context.Context) ([]types.Node, error)      { return nil, ErrNotImplemented }
+func (noopStore) DeleteNode(context.Context, string) error             { return ErrNotImplemented }
+func (noopStore) Heartbeat(context.Context, string, time.Time) error   { return ErrNotImplemented }
+func (noopStore) PutSubject(context.Context, types.Subject) error      { return ErrNotImplemented }
+func (noopStore) GetSubject(context.Context, string) (*types.Subject, error) {
+	return nil, ErrNotImplemented
+}
+func (noopStore) PutPolicy(context.Context, types.Policy) error { return ErrNotImplemented }
 func (noopStore) ListPoliciesFor(context.Context, string) ([]types.Policy, error) {
 	return nil, ErrNotImplemented
 }
-func (noopStore) DeletePolicy(context.Context, string) error           { return ErrNotImplemented }
-func (noopStore) Tx(context.Context, func(Tx) error) error             { return ErrNotImplemented }
+func (noopStore) DeletePolicy(context.Context, string) error { return ErrNotImplemented }
+func (noopStore) Tx(context.Context, func(Tx) error) error   { return ErrNotImplemented }

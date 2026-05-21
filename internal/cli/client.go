@@ -35,8 +35,8 @@ func NewClient(listenAddr, dataDir string) (*Client, error) {
 	}
 
 	httpClient := &http.Client{Timeout: 30 * time.Second}
-	if strings.HasPrefix(listenAddr, "unix://") {
-		path := strings.TrimPrefix(listenAddr, "unix://")
+	if after, ok := strings.CutPrefix(listenAddr, "unix://"); ok {
+		path := after
 		httpClient.Transport = &http.Transport{
 			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 				var d net.Dialer

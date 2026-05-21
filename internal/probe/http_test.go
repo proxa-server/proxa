@@ -99,7 +99,9 @@ func TestHTTPProbeCtxCancel(t *testing.T) {
 }
 
 // boolPtr is a tiny helper for FollowRedirects test cases.
-func boolPtr(b bool) *bool { return &b }
+//
+//go:fix inline
+func boolPtr(b bool) *bool { return new(b) }
 
 // TestHTTPProbeFollowRedirects covers the FollowRedirects tri-state on
 // the direct probe path: nil = Go default (follow), *true = same,
@@ -126,8 +128,8 @@ func TestHTTPProbeFollowRedirects(t *testing.T) {
 		wantHealthy     bool
 	}{
 		{"nil follows redirect to 200 (default)", nil, true},
-		{"true follows redirect to 200", boolPtr(true), true},
-		{"false treats 3xx as non-2xx", boolPtr(false), false},
+		{"true follows redirect to 200", new(true), true},
+		{"false treats 3xx as non-2xx", new(false), false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -198,14 +200,14 @@ func TestHTTPProbeViaIngress_TLSDirect(t *testing.T) {
 		{
 			name:            "TLS=true + explicit follow=true: targets HTTPS too (same as nil here)",
 			ing:             IngressInfo{HTTPPort: httpPort, HTTPSPort: httpsPort, TLSEnabled: true},
-			followRedirects: boolPtr(true),
+			followRedirects: new(true),
 			wantHealthy:     false, // follow=true takes the HTTP-direct branch and follows to example.invalid → fails
 			wantHTTPHits:    1,
 		},
 		{
 			name:            "TLS=true + explicit follow=false: stays on HTTP, sees 301 directly, treats as non-2xx",
 			ing:             IngressInfo{HTTPPort: httpPort, HTTPSPort: httpsPort, TLSEnabled: true},
-			followRedirects: boolPtr(false),
+			followRedirects: new(false),
 			wantHealthy:     false, // 301 → CheckRedirect returns ErrUseLastResponse → 301 status → non-2xx
 			wantHTTPHits:    1,
 		},

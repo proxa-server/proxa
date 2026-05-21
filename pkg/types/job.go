@@ -11,7 +11,7 @@ type Job struct {
 	Name      string    `json:"name"`
 	Spec      TaskDef   `json:"spec"`
 	LastRun   *JobRun   `json:"lastRun,omitempty"`
-	NextRunAt time.Time `json:"nextRunAt,omitempty"`
+	NextRunAt time.Time `json:"nextRunAt"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
@@ -20,9 +20,9 @@ type Job struct {
 // resolvable by whatever log storage the runtime uses.
 type JobRun struct {
 	StartedAt time.Time     `json:"startedAt"`
-	EndedAt   time.Time     `json:"endedAt,omitempty"`
+	EndedAt   time.Time     `json:"endedAt"`
 	Duration  time.Duration `json:"duration"`
 	ExitCode  int           `json:"exitCode"`
-	Status    string        `json:"status"`  // running | succeeded | failed | timeout
+	Status    string        `json:"status"` // running | succeeded | failed | timeout
 	LogsRef   string        `json:"logsRef"`
 }
