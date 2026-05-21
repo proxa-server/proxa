@@ -63,6 +63,19 @@ type HealthCheck struct {
 	//                    where bridge IPs are unreachable from the host).
 	// Only meaningful for HTTP probes (Path != ""); ignored for exec.
 	Via string `toml:"via" json:"via,omitempty"`
+
+	// FollowRedirects controls HTTP redirect handling. Tri-state:
+	//   nil   → use the default for the probe's construction mode:
+	//           direct probes follow redirects (Go default, up to 10);
+	//           via-ingress probes with TLS enabled bypass the redirect
+	//           entirely by targeting the HTTPS port directly (the v0.4.1
+	//           fix for the probe-via-ingress + TLS=true collision).
+	//   *true  → force redirect-following (up to 10); final response status
+	//            is the probe outcome.
+	//   *false → do not follow redirects; treat 3xx as non-2xx (probe fails).
+	//            Useful when the operator wants to assert the redirect itself.
+	// Only meaningful for HTTP probes (Path != ""); ignored for exec.
+	FollowRedirects *bool `toml:"follow_redirects" json:"follow_redirects,omitempty"`
 }
 
 // Route is one operator-declared mapping of (hostname, optional path)

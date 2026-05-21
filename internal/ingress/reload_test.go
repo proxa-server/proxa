@@ -51,10 +51,8 @@ func TestRouterPtrConcurrentReadersAndSwaps(t *testing.T) {
 	var stop atomic.Bool
 
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 100 {
+		wg.Go(func() {
 			for !stop.Load() {
 				r := p.Load()
 				if r == nil {
@@ -66,10 +64,10 @@ func TestRouterPtrConcurrentReadersAndSwaps(t *testing.T) {
 				_, _, _ = r.LookupL7("x", "/")
 				reads.Add(1)
 			}
-		}()
+		})
 	}
 
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		fresh, err := BuildRouter(map[ServiceID][]types.Route{
 			{Project: "default", Service: "a"}: {{Host: "a.example.com"}},
 		})

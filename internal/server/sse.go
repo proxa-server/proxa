@@ -17,7 +17,7 @@ func writeSSEEvent(w io.Writer, event, data string) {
 	if event != "" {
 		_, _ = fmt.Fprintf(w, "event: %s\n", event)
 	}
-	for _, line := range strings.Split(data, "\n") {
+	for line := range strings.SplitSeq(data, "\n") {
 		_, _ = fmt.Fprintf(w, "data: %s\n", line)
 	}
 	_, _ = fmt.Fprint(w, "\n")

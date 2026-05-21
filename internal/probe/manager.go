@@ -38,6 +38,13 @@ type Manager struct {
 	// direct bridge-IP dial.
 	ingressHTTPPort int
 
+	// ingressHTTPSPort is the loopback HTTPS port. When ingressTLSEnabled
+	// is true and a via-ingress probe has no explicit FollowRedirects
+	// override, the probe targets this port directly (instead of HTTP)
+	// to avoid the 0.4.0 redirect/cert collision. Set via Options.
+	ingressHTTPSPort  int
+	ingressTLSEnabled bool
+
 	mu      sync.Mutex
 	entries map[string]*entry
 
@@ -50,7 +57,21 @@ type Manager struct {
 // Options carries optional Manager configuration. Empty value yields
 // v0.2 behavior (HTTPProbes always dial the bridge IP).
 type Options struct {
+	// IngressHTTPPort is the loopback HTTP port HTTPProbes target when
+	// a service opts into spec.Health.Via == "ingress". Zero disables
+	// the ingress path.
 	IngressHTTPPort int
+
+	// IngressHTTPSPort is the loopback HTTPS port. Used together with
+	// IngressTLSEnabled by the v0.4.1 fix for probes against
+	// TLS-enabled ingress.
+	IngressHTTPSPort int
+
+	// IngressTLSEnabled mirrors [ingress].tls. When true and a via-
+	// ingress probe has no explicit follow_redirects override, the
+	// probe targets IngressHTTPSPort directly to avoid the redirect
+	// loop that broke probes in v0.4.0.
+	IngressTLSEnabled bool
 }
 
 type entry struct {
@@ -74,12 +95,14 @@ func NewWithOptions(rt runtime.Runtime, log *slog.Logger, opts Options) *Manager
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Manager{
-		rt:              rt,
-		log:             log,
-		ingressHTTPPort: opts.IngressHTTPPort,
-		entries:         make(map[string]*entry),
-		mgrCtx:          ctx,
-		mgrCancel:       cancel,
+		rt:                rt,
+		log:               log,
+		ingressHTTPPort:   opts.IngressHTTPPort,
+		ingressHTTPSPort:  opts.IngressHTTPSPort,
+		ingressTLSEnabled: opts.IngressTLSEnabled,
+		entries:           make(map[string]*entry),
+		mgrCtx:            ctx,
+		mgrCancel:         cancel,
 	}
 }
 
@@ -142,8 +165,7 @@ func (m *Manager) Track(containerID string, spec types.TaskDef) error {
 	m.entries[containerID] = e
 	m.mu.Unlock()
 
-	m.wg.Add(1)
-	go m.probeLoop(ctx, containerID, spec, e)
+	m.wg.Go(func() { m.probeLoop(ctx, containerID, spec, e) })
 	return nil
 }
 
@@ -195,8 +217,8 @@ func (m *Manager) Snapshot(containerID string) (Snapshot, bool) {
 }
 
 // probeLoop runs one container's probe goroutine. Exits on ctx cancel.
+// Scheduled via sync.WaitGroup.Go (Go 1.25) — no manual Add/Done pair.
 func (m *Manager) probeLoop(ctx context.Context, id string, spec types.TaskDef, e *entry) {
-	defer m.wg.Done()
 	defer close(e.done)
 
 	interval := spec.Health.Interval
@@ -227,7 +249,12 @@ func (m *Manager) probeLoop(ctx context.Context, id string, spec types.TaskDef, 
 				m.log.Error("probe: Health.Via=ingress but no [[route]] declared", "container", id)
 				return
 			}
-			httpProbe = NewHTTPProbeViaIngress(m.ingressHTTPPort, host, spec.Health.Path, timeout)
+			ing := IngressInfo{
+				HTTPPort:   m.ingressHTTPPort,
+				HTTPSPort:  m.ingressHTTPSPort,
+				TLSEnabled: m.ingressTLSEnabled,
+			}
+			httpProbe = NewHTTPProbeViaIngress(ing, host, spec.Health.Path, timeout, spec.Health.FollowRedirects)
 		} else {
 			info, err := m.rt.InspectContainer(ctx, id)
 			if err != nil {
@@ -238,7 +265,7 @@ func (m *Manager) probeLoop(ctx context.Context, id string, spec types.TaskDef, 
 			if port == 0 && len(spec.Expose) > 0 {
 				port = spec.Expose[0].Container
 			}
-			httpProbe = NewHTTPProbe(info.IPAddress, port, spec.Health.Path, timeout)
+			httpProbe = NewHTTPProbe(info.IPAddress, port, spec.Health.Path, timeout, spec.Health.FollowRedirects)
 		}
 	}
 	if len(spec.Health.Command) > 0 {

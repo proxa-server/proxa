@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
@@ -13,6 +15,7 @@ import (
 
 	"github.com/proxa-server/proxa/internal/auth/password"
 	"github.com/proxa-server/proxa/internal/config"
+	"github.com/proxa-server/proxa/internal/datadir"
 	"github.com/proxa-server/proxa/internal/store/sqlite"
 	"github.com/proxa-server/proxa/pkg/types"
 )
@@ -38,33 +41,38 @@ func runInit(ctx context.Context, cfg *config.Config) error {
 	}
 	fmt.Printf("created  %s/\n", cfg.DataDir)
 
-	// 2. Open + migrate SQLite.
+	// 2. Open + migrate SQLite through the data-dir sandbox.
+	root, err := datadir.Open(cfg.DataDir)
+	if err != nil {
+		return fmt.Errorf("init: open data-dir sandbox: %w", err)
+	}
+	defer root.Close()
 	st := sqlite.New()
-	dbPath := filepath.Join(cfg.DataDir, "proxa.db")
-	if err := st.Open(ctx, dbPath); err != nil {
+	if err := st.OpenInRoot(ctx, root, "proxa.db"); err != nil {
 		return err
 	}
 	defer st.Close()
 	if err := st.Migrate(ctx); err != nil {
 		return err
 	}
+	dbPath := filepath.Join(cfg.DataDir, "proxa.db")
 	fmt.Printf("created  %s (SQLite, schema v1)\n", dbPath)
 
-	// 3. Master key for future secrets (stored 0600).
-	keyPath := filepath.Join(cfg.DataDir, "secrets.key")
-	if _, err := os.Stat(keyPath); os.IsNotExist(err) {
+	// 3. Master key for future secrets (stored 0600, sandboxed).
+	if _, err := root.Stat("secrets.key"); errors.Is(err, fs.ErrNotExist) {
 		key := make([]byte, 32)
 		if _, err := rand.Read(key); err != nil {
 			return fmt.Errorf("init: rand for master key: %w", err)
 		}
-		if err := os.WriteFile(keyPath, []byte(base64.StdEncoding.EncodeToString(key)+"\n"), 0o600); err != nil {
+		if err := root.WriteFile("secrets.key", []byte(base64.StdEncoding.EncodeToString(key)+"\n"), 0o600); err != nil {
 			return fmt.Errorf("init: write master key: %w", err)
 		}
-		fmt.Printf("created  %s (mode 0600)\n", keyPath)
+		fmt.Printf("created  %s (mode 0600)\n", filepath.Join(cfg.DataDir, "secrets.key"))
 	}
 
-	// 4. Local admin user.
-	adminPwd := genTokenString(20) // human-typeable-ish
+	// 4. Local admin user. crypto/rand.Text (Go 1.24): 26 chars of
+	// base32, ~130 bits of entropy — exceeds FR-002 (≥128 bits).
+	adminPwd := rand.Text()
 	pwHash, err := password.HashPassword(adminPwd)
 	if err != nil {
 		return err
@@ -81,8 +89,9 @@ func runInit(ctx context.Context, cfg *config.Config) error {
 	fmt.Printf("created  admin user 'admin' (provider=local; password printed below — STORE IT)\n")
 	fmt.Printf("   admin password: %s\n", adminPwd)
 
-	// 5. Bootstrap token.
-	token := genTokenString(32)
+	// 5. Bootstrap token. Same crypto/rand.Text source as the admin
+	// password — uniformly 130 bits.
+	token := rand.Text()
 	tokHash, err := password.HashPassword(token)
 	if err != nil {
 		return err
@@ -121,8 +130,3 @@ func runInit(ctx context.Context, cfg *config.Config) error {
 	return nil
 }
 
-func genTokenString(n int) string {
-	buf := make([]byte, n)
-	_, _ = rand.Read(buf)
-	return base64.RawURLEncoding.EncodeToString(buf)
-}

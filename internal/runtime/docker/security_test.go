@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/proxa-server/proxa/internal/runtime"
@@ -57,10 +58,5 @@ func TestApplySecurityProfile(t *testing.T) {
 type types_SecurityProfile = security.SecurityProfile
 
 func containsString(xs []string, s string) bool {
-	for _, x := range xs {
-		if x == s {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(xs, s)
 }

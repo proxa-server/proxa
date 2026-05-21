@@ -64,7 +64,7 @@ func TestWritePlainLine(t *testing.T) {
 }
 
 func TestFlushNoOpOnNonFlusher(t *testing.T) {
-	var b bytes.Buffer // doesn't implement Flusher
+	var b bytes.Buffer     // doesn't implement Flusher
 	writeSSEData(&b, "ok") // must not panic
 	if !strings.Contains(b.String(), "ok") {
 		t.Errorf("data not written: %q", b.String())
@@ -73,7 +73,7 @@ func TestFlushNoOpOnNonFlusher(t *testing.T) {
 
 func TestFlushPerWrite(t *testing.T) {
 	var f flushCounter
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		writeSSEData(&f, "line")
 	}
 	if f.flushes.Load() != 5 {

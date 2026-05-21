@@ -5,7 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"sort"
+	"cmp"
+	"slices"
 	"strconv"
 	"time"
 
@@ -155,10 +156,10 @@ func (s *Server) resolveReplicaContainer(r *http.Request, project, service strin
 		return "", "", errServiceNotFound{Project: project, Service: service}
 	}
 	// Sort by replica index ascending.
-	sort.Slice(matching, func(i, j int) bool {
-		ri, _ := strconv.Atoi(matching[i].Labels[dockerlabels.LabelReplica])
-		rj, _ := strconv.Atoi(matching[j].Labels[dockerlabels.LabelReplica])
-		return ri < rj
+	slices.SortFunc(matching, func(a, b rt.ContainerInfo) int {
+		ra, _ := strconv.Atoi(a.Labels[dockerlabels.LabelReplica])
+		rb, _ := strconv.Atoi(b.Labels[dockerlabels.LabelReplica])
+		return cmp.Compare(ra, rb)
 	})
 	if replicaIdx >= len(matching) {
 		return "", "", errReplicaNotFound{ReplicaIdx: replicaIdx, Have: len(matching)}

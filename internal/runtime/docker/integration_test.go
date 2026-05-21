@@ -1,5 +1,4 @@
 //go:build dockerd
-// +build dockerd
 
 // Integration tests that require a live Docker daemon. Run with:
 //

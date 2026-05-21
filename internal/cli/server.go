@@ -15,6 +15,7 @@ import (
 	"github.com/proxa-server/proxa/internal/auth/dbpolicy"
 	"github.com/proxa-server/proxa/internal/auth/token"
 	"github.com/proxa-server/proxa/internal/config"
+	"github.com/proxa-server/proxa/internal/datadir"
 	"github.com/proxa-server/proxa/internal/ingress"
 	"github.com/proxa-server/proxa/internal/probe"
 	"github.com/proxa-server/proxa/internal/reconciler"
@@ -47,9 +48,16 @@ func runServer(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("server: %s missing — run `proxa init` first", dbPath)
 	}
 
-	// Open store.
+	// Open the data-dir sandbox; every data-dir file op flows through it.
+	root, err := datadir.Open(cfg.DataDir)
+	if err != nil {
+		return fmt.Errorf("server: open data-dir sandbox: %w", err)
+	}
+	defer root.Close()
+
+	// Open store through the sandbox.
 	st := sqlite.New()
-	if err := st.Open(ctx, dbPath); err != nil {
+	if err := st.OpenInRoot(ctx, root, "proxa.db"); err != nil {
 		return err
 	}
 	defer st.Close()
@@ -69,10 +77,13 @@ func runServer(ctx context.Context, cfg *config.Config) error {
 	authz := dbpolicy.New(st)
 
 	// Probe manager (health checks per replica). Pass the ingress
-	// HTTP port so probes can opt into via=ingress and skip the
-	// bridge-IP dial that doesn't work on Docker Desktop.
+	// HTTP/HTTPS ports + TLS state so probes can opt into via=ingress
+	// and (when TLS is on) bypass the HTTP→HTTPS redirect dance that
+	// broke probes in v0.4.0.
 	probes := probe.NewWithOptions(rt, logger, probe.Options{
-		IngressHTTPPort: cfg.Ingress.HTTPPort,
+		IngressHTTPPort:   cfg.Ingress.HTTPPort,
+		IngressHTTPSPort:  cfg.Ingress.HTTPSPort,
+		IngressTLSEnabled: cfg.Ingress.TLS,
 	})
 
 	// Ingress (L7/L4 routing layer).

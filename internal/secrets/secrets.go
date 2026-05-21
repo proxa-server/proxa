@@ -22,6 +22,10 @@ import (
 //   - No secret material is logged. Error messages reference project/name
 //     only — never the value or any derivative.
 //   - Master key is on disk at ${PROXA_DATA_DIR}/secrets.key with mode 0600.
+//   - All file operations MUST flow through [internal/datadir.Root]
+//     (added in v0.4.1) — no direct os.OpenFile / os.ReadFile against
+//     the data directory. Implementations should accept *datadir.Root
+//     in their constructor.
 type SecretsStore interface {
 	Open(ctx context.Context, keyPath string) error
 	Close() error

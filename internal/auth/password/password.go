@@ -95,11 +95,11 @@ func basicAuth(r *http.Request) (string, string, bool) {
 		return "", "", false
 	}
 	pair := string(dec)
-	colon := strings.IndexByte(pair, ':')
-	if colon < 0 {
+	before, after, ok := strings.Cut(pair, ":")
+	if !ok {
 		return "", "", false
 	}
-	return pair[:colon], pair[colon+1:], true
+	return before, after, true
 }
 
 func stripSecret(m map[string]string) map[string]string {

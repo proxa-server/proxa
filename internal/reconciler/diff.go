@@ -5,7 +5,8 @@
 package reconciler
 
 import (
-	"sort"
+	"cmp"
+	"slices"
 	"strconv"
 
 	"github.com/proxa-server/proxa/internal/hash"
@@ -140,15 +141,14 @@ func Compute(desired []types.Service, actual []rt.ContainerInfo, probeUnhealthy 
 		}
 	}
 
-	sort.Slice(actions, func(i, j int) bool {
-		a, b := actions[i], actions[j]
-		if a.Project != b.Project {
-			return a.Project < b.Project
+	slices.SortFunc(actions, func(a, b Action) int {
+		if c := cmp.Compare(a.Project, b.Project); c != 0 {
+			return c
 		}
-		if a.Service != b.Service {
-			return a.Service < b.Service
+		if c := cmp.Compare(a.Service, b.Service); c != 0 {
+			return c
 		}
-		return a.Replica < b.Replica
+		return cmp.Compare(a.Replica, b.Replica)
 	})
 
 	return actions

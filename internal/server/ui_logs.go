@@ -42,7 +42,7 @@ func (s *Server) handleUILogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	replicas := make([]int, 0, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		replicas = append(replicas, i)
 	}
 

@@ -37,8 +37,7 @@ func startTCPEchoBackend(t *testing.T, ctx context.Context) int {
 }
 
 func TestL4TCPForwarderEchoLoopback(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	backendPort := startTCPEchoBackend(t, ctx)
 
@@ -84,8 +83,7 @@ func TestL4TCPForwarderEchoLoopback(t *testing.T) {
 }
 
 func TestL4TCPForwarderNoHealthyBackend(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	pools := newPoolRegistry()
 	svc := ServiceID{Project: "default", Service: "echo"}

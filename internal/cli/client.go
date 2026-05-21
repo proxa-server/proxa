@@ -35,8 +35,8 @@ func NewClient(listenAddr, dataDir string) (*Client, error) {
 	}
 
 	httpClient := &http.Client{Timeout: 30 * time.Second}
-	if strings.HasPrefix(listenAddr, "unix://") {
-		path := strings.TrimPrefix(listenAddr, "unix://")
+	if after, ok := strings.CutPrefix(listenAddr, "unix://"); ok {
+		path := after
 		httpClient.Transport = &http.Transport{
 			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 				var d net.Dialer
@@ -134,6 +134,22 @@ func (c *Client) Scale(ctx context.Context, project, name string, replicas int) 
 
 // SystemStatus fetches GET /api/v1/system/status and decodes it into
 // the loose-typed map shape that the JSON API returns.
+func (c *Client) SystemInfo(ctx context.Context) (map[string]any, error) {
+	resp, err := c.do(ctx, http.MethodGet, "/api/v1/system", nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode/100 != 2 {
+		return nil, decodeAPIError(resp)
+	}
+	var out map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, fmt.Errorf("cli: decode system info: %w", err)
+	}
+	return out, nil
+}
+
 func (c *Client) SystemStatus(ctx context.Context) (map[string]any, error) {
 	resp, err := c.do(ctx, http.MethodGet, "/api/v1/system/status", nil)
 	if err != nil {

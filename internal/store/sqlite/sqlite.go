@@ -10,7 +10,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/proxa-server/proxa/internal/datadir"
 	_ "modernc.org/sqlite" // register the SQL driver
 )
 
@@ -25,9 +28,40 @@ func New() *Store {
 	return &Store{}
 }
 
+// OpenInRoot opens the SQLite database at filename relative to root.
+// The path is validated against the root's sandbox before sql.Open is
+// called — a name that resolves outside root returns an error and the
+// database is not opened. Use this from production code paths.
+//
+// The SQLite driver still receives an absolute path (it needs a path
+// string, not a *os.File), but the absolute path is the one root.Dir()
+// composes with filename — guaranteed by the prior sandbox check to
+// resolve inside the data directory.
+//
+// Production callers (proxa init, proxa server) MUST use OpenInRoot.
+// The legacy [Store.Open] is preserved for the in-memory test idiom
+// (`":memory:"`) and for callers that already have a validated path.
+func (s *Store) OpenInRoot(ctx context.Context, root *datadir.Root, filename string) error {
+	if root == nil {
+		return fmt.Errorf("store/sqlite: OpenInRoot: nil root")
+	}
+	// Sandbox check: open + close immediately. O_CREATE so first-init
+	// (file does not yet exist) succeeds. If filename escapes root,
+	// the underlying *os.Root refuses with a *PathError.
+	f, err := root.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0o600)
+	if err != nil {
+		return fmt.Errorf("store/sqlite: sandbox %q: %w", filename, err)
+	}
+	_ = f.Close()
+	return s.Open(ctx, filepath.Join(root.Dir(), filename))
+}
+
 // Open establishes the connection pool and applies WAL + busy-timeout pragmas.
 // dsn is the SQLite DSN (path or ":memory:"). Open is idempotent within a
 // process — re-opening after Close is allowed.
+//
+// Production code SHOULD use [Store.OpenInRoot] instead — Open bypasses
+// the data-dir sandbox and accepts any path string.
 func (s *Store) Open(ctx context.Context, dsn string) error {
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {

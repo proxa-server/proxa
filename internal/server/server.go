@@ -37,8 +37,18 @@ type Server struct {
 }
 
 // New returns a Server ready to Start.
+//
+// http.CrossOriginProtection (Go 1.25) is mounted as the outermost
+// middleware so every route — current and future — inherits the
+// defense by default. The check is no-op for GET/HEAD/OPTIONS (the
+// dashboard's HTMX polling path) and only rejects state-changing
+// requests from a foreign Origin. Mounted BEFORE auth so a malicious
+// cross-origin POST fails fast on the header check before any DB
+// lookup happens.
 func New(cfg *config.Config, st store.StateStore, runtime rt.Runtime, recon *reconciler.Reconciler,
 	authn auth.Authenticator, authz auth.PolicyEngine) *Server {
+	router := chi.NewMux()
+	router.Use(http.NewCrossOriginProtection().Handler)
 	return &Server{
 		cfg:     cfg,
 		store:   st,
@@ -46,7 +56,7 @@ func New(cfg *config.Config, st store.StateStore, runtime rt.Runtime, recon *rec
 		recon:   recon,
 		authn:   authn,
 		authz:   authz,
-		Router:  chi.NewMux(),
+		Router:  router,
 	}
 }
 

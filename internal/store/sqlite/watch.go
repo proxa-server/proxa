@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/proxa-server/proxa/internal/store"
@@ -34,7 +35,7 @@ func (s *Store) WatchServices(ctx context.Context, project string) (<-chan store
 func (s *Store) runWatch(ctx context.Context, project string, out chan<- store.ServiceEvent) {
 	defer close(out)
 
-	lastSeen := time.Time{} // emit everything on the first tick
+	lastSeen := time.Time{}      // emit everything on the first tick
 	known := map[string]string{} // service name -> last updated_at
 
 	tick := time.NewTicker(watchPollInterval)
@@ -105,8 +106,6 @@ func (s *Store) scanWatch(ctx context.Context, project string, lastSeen *time.Ti
 	for k := range known {
 		delete(known, k)
 	}
-	for k, v := range current {
-		known[k] = v
-	}
+	maps.Copy(known, current)
 	*lastSeen = time.Now()
 }

@@ -75,7 +75,7 @@ func TestStreamLogsDemuxesInterleavedStdoutStderr(t *testing.T) {
 func TestStreamLogsCloseStopsGoroutine(t *testing.T) {
 	// Body big enough that StdCopy is still working when Close fires.
 	body := []byte{}
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		body = append(body, stdcopyFrame(1, "line\n")...)
 	}
 	m := &mockDockerClient{logsBody: body}

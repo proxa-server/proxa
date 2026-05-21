@@ -1,5 +1,4 @@
 //go:build dockerd
-// +build dockerd
 
 package docker
 

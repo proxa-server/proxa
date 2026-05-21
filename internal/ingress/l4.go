@@ -115,7 +115,7 @@ func (f *l4Forwarder) handleTCPConn(ctx context.Context, client net.Conn) {
 	if backend == nil {
 		return // no healthy backend; drop
 	}
-	backendAddr := fmt.Sprintf("%s:%d", backend.IPAddress, backend.Port)
+	backendAddr := net.JoinHostPort(backend.IPAddress, fmt.Sprintf("%d", backend.Port))
 	upstream, err := net.DialTimeout("tcp", backendAddr, 5*time.Second)
 	if err != nil {
 		f.logger.Warn("ingress/l4: backend dial failed", "addr", backendAddr, "err", err)

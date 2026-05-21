@@ -101,3 +101,57 @@ where the container's bridge lives.
 
 On a Linux server with bridge-routable hosts this flag has no
 effect (the default direct-dial path works); harmless to set.
+
+## Lint tooling (v0.4.1+)
+
+Lint is wired through Go 1.24's `tool` directive in `go.mod`. On a
+fresh clone, contributors run `make lint` and `staticcheck` resolves
+automatically through `go tool` — no manual `go install` or `brew
+install` step.
+
+The pinned version is visible in `go.mod`:
+
+```
+tool honnef.co/go/tools/cmd/staticcheck
+```
+
+To run staticcheck directly outside the Makefile:
+
+```sh
+go tool staticcheck ./...
+```
+
+To bump the version: `go get -tool honnef.co/go/tools/cmd/staticcheck@<new-version>`.
+This pattern will extend to `gofumpt`, `golangci-lint`, etc. in
+v0.4.2 (Test Foundation).
+
+## Container-aware GOMAXPROCS (v0.4.1+)
+
+Go 1.25 auto-detects CPU limits when Proxa runs inside a container.
+No code change is required — `runtime.GOMAXPROCS(0)` reports the
+effective CPU count, not the host's full core count.
+
+To verify the auto-adjustment took effect, run `proxa system info`
+against a running server (or open the dashboard's System Info
+footer card / `/ui/system` page):
+
+```
+$ proxa system info
+...
+gomaxprocs=2
+gomaxprocs_source=container_limit
+numcpu_host=16
+...
+```
+
+- `gomaxprocs_source=container_limit` — Go auto-adjusted from a
+  cgroup CPU quota.
+- `gomaxprocs_source=env_override` — the `GOMAXPROCS` env var is
+  explicitly set; the explicit value wins.
+- `gomaxprocs_source=host` — no env var, no container limit detected;
+  Proxa uses the full host CPU count.
+
+If you're deploying Proxa inside a CPU-limited container and the
+source reports `host`, double-check the cgroup setup — Proxa is
+probably running with full host scheduling rights, which may cause
+noisy-neighbor issues.

@@ -1,12 +1,10 @@
 //go:build dockerd
-// +build dockerd
 
 package ingress
 
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"log/slog"
 	"net"
 	"net/http"

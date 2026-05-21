@@ -1,6 +1,7 @@
 package hash
 
 import (
+	"maps"
 	"testing"
 
 	"github.com/proxa-server/proxa/pkg/types"
@@ -39,8 +40,8 @@ func TestHashDeterministic(t *testing.T) {
 
 func TestHashChangesOnFieldChange(t *testing.T) {
 	tests := []struct {
-		name    string
-		mutate  func(*types.TaskDef)
+		name     string
+		mutate   func(*types.TaskDef)
 		wantSame bool
 	}{
 		{
@@ -92,9 +93,7 @@ func TestHashChangesOnFieldChange(t *testing.T) {
 			mutated := base
 			if mutated.Env != nil {
 				envCopy := make(map[string]string, len(mutated.Env))
-				for k, v := range mutated.Env {
-					envCopy[k] = v
-				}
+				maps.Copy(envCopy, mutated.Env)
 				mutated.Env = envCopy
 			}
 			tt.mutate(&mutated)
