@@ -70,8 +70,9 @@ func runInit(ctx context.Context, cfg *config.Config) error {
 		fmt.Printf("created  %s (mode 0600)\n", filepath.Join(cfg.DataDir, "secrets.key"))
 	}
 
-	// 4. Local admin user.
-	adminPwd := genTokenString(20) // human-typeable-ish
+	// 4. Local admin user. crypto/rand.Text (Go 1.24): 26 chars of
+	// base32, ~130 bits of entropy — exceeds FR-002 (≥128 bits).
+	adminPwd := rand.Text()
 	pwHash, err := password.HashPassword(adminPwd)
 	if err != nil {
 		return err
@@ -88,8 +89,9 @@ func runInit(ctx context.Context, cfg *config.Config) error {
 	fmt.Printf("created  admin user 'admin' (provider=local; password printed below — STORE IT)\n")
 	fmt.Printf("   admin password: %s\n", adminPwd)
 
-	// 5. Bootstrap token.
-	token := genTokenString(32)
+	// 5. Bootstrap token. Same crypto/rand.Text source as the admin
+	// password — uniformly 130 bits.
+	token := rand.Text()
 	tokHash, err := password.HashPassword(token)
 	if err != nil {
 		return err
@@ -128,8 +130,3 @@ func runInit(ctx context.Context, cfg *config.Config) error {
 	return nil
 }
 
-func genTokenString(n int) string {
-	buf := make([]byte, n)
-	_, _ = rand.Read(buf)
-	return base64.RawURLEncoding.EncodeToString(buf)
-}
