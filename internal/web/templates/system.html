@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proxa · System Info</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/htmx.min.js" defer></script>
+<script src="/static/alpine.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="/ui/">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="2" width="20" height="20" rx="6" fill="#2a9d8f" opacity=".15"/>
+      <path d="M7 8h4a3 3 0 0 1 0 6H7V8z" stroke="#2a9d8f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17 8v8" stroke="#2a9d8f" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="17" cy="8" r="1.5" fill="#2a9d8f"/>
+    </svg>
+    <span class="wordmark">Proxa</span>
+    <span class="badge">System</span>
+  </a>
+  <div class="cluster-status">
+    <a href="/ui/" style="color:var(--fg-2);text-decoration:none">← Back to dashboard</a>
+  </div>
+</nav>
+
+<div class="container" x-data="systemInfoController()" x-init="load()">
+
+  <div class="card" style="padding:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h1 style="margin:0;font-size:18px">⚙️ System Info</h1>
+      <button @click="load()" class="chip chip-neutral" style="border:none;cursor:pointer">
+        🔄 Refresh
+      </button>
+    </div>
+
+    <div x-show="loading" style="color:var(--fg-3)">loading…</div>
+    <div x-show="err" x-text="err" style="color:#e63946"></div>
+
+    <table x-show="info && !loading" style="width:100%;border-collapse:collapse;font-size:14px">
+      <tbody>
+        <tr>
+          <td style="padding:8px 0;color:var(--fg-3);width:200px">Proxa version</td>
+          <td class="mono" x-text="info.proxa_version"></td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:var(--fg-3)">Build commit</td>
+          <td class="mono" x-text="info.commit"></td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:var(--fg-3)">Build date</td>
+          <td class="mono" x-text="info.build_date"></td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:var(--fg-3)">Go runtime</td>
+          <td class="mono" x-text="info.go_version"></td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:var(--fg-3)">GOEXPERIMENT flags</td>
+          <td class="mono" x-text="info.go_experiments.length === 0 ? '(none)' : info.go_experiments.join(', ')"></td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:var(--fg-3)">GOMAXPROCS</td>
+          <td class="mono">
+            <span x-text="info.gomaxprocs"></span>
+            <span class="chip chip-neutral" style="margin-left:8px" x-text="sourceLabel(info.gomaxprocs_source)"></span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:var(--fg-3)">Host CPU count</td>
+          <td class="mono" x-text="info.numcpu_host"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <pre x-show="info && !loading" style="margin-top:24px;padding:12px;background:var(--bg-2);border-radius:6px;font-size:12px;overflow-x:auto"
+         x-text="JSON.stringify(info, null, 2)"></pre>
+  </div>
+
+  <div class="footer">
+    Read-only · Refreshes every 30s (rare changes)
+  </div>
+
+</div>
+
+<script>
+function systemInfoController() {
+  return {
+    info: null,
+    loading: false,
+    err: '',
+    pollHandle: null,
+    load() {
+      this.loading = true;
+      this.err = '';
+      fetch('/api/v1/system', { credentials: 'same-origin' })
+        .then(r => r.ok ? r.json() : r.text().then(t => Promise.reject(new Error(r.status + ': ' + t))))
+        .then(data => { this.info = data; this.loading = false; })
+        .catch(e => { this.err = String(e); this.loading = false; });
+    },
+    sourceLabel(s) {
+      switch (s) {
+        case 'host': return 'host';
+        case 'container_limit': return 'auto-adjusted from container limit';
+        case 'env_override': return 'env override';
+        default: return s;
+      }
+    },
+    init() {
+      // Start polling every 30s after first manual load completes.
+      this.pollHandle = setInterval(() => this.load(), 30000);
+      window.addEventListener('beforeunload', () => clearInterval(this.pollHandle));
+    },
+  };
+}
+</script>
+
+</body>
+</html>
