@@ -10,6 +10,7 @@ func (s *Server) MountRoutes() {
 	s.Router.Route("/api/v1", func(r chi.Router) {
 		r.Use(RequireAuth(s.authn))
 		r.Get("/system/status", s.handleSystemStatus)
+		r.Get("/system", s.handleSystemInfo)
 		r.Get("/projects", s.handleListProjects)
 		r.Post("/projects", s.handleCreateProject)
 		r.Route("/projects/{project}/services", func(r chi.Router) {
