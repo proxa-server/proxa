@@ -5,7 +5,7 @@
 # `go run` so contributors do not need a global install.
 
 GO              ?= go
-STATICCHECK     := honnef.co/go/tools/cmd/staticcheck@v0.7.0
+STATICCHECK     := honnef.co/go/tools/cmd/staticcheck@v0.7.0   # legacy: see `go tool` directive in go.mod (v0.4.1+)
 VERSION         := $(shell git describe --tags --dirty --always 2>/dev/null || echo dev)
 COMMIT          := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 BUILD_DATE      := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -32,9 +32,9 @@ test-integration: ## Run dockerd-tagged integration tests (requires Docker daemo
 test-e2e: build ## Run e2e tests against the built binary (requires Docker daemon)
 	$(GO) test -count=1 -tags e2e ./tests/e2e/...
 
-lint: ## go vet + staticcheck (pinned via go run)
+lint: ## go vet + staticcheck (pinned via go.mod tool directive — no install needed)
 	$(GO) vet ./...
-	$(GO) run $(STATICCHECK) ./...
+	$(GO) tool staticcheck ./...
 
 clean: ## Remove built binaries
 	rm -rf bin/
