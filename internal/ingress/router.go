@@ -1,8 +1,8 @@
 package ingress
 
 import (
-	"fmt"
 	"cmp"
+	"fmt"
 	"slices"
 	"strings"
 
@@ -78,13 +78,13 @@ func matchPath(glob, path string) bool {
 	if glob == "" {
 		return true
 	}
-	if strings.HasSuffix(glob, "/*") {
-		prefix := strings.TrimSuffix(glob, "/*")
+	if before, ok := strings.CutSuffix(glob, "/*"); ok {
+		prefix := before
 		return path == prefix || strings.HasPrefix(path, prefix+"/") || path == prefix+"/"
 	}
-	if strings.HasSuffix(glob, "*") {
+	if before, ok := strings.CutSuffix(glob, "*"); ok {
 		// trailing * not preceded by / — treat as raw prefix.
-		return strings.HasPrefix(path, strings.TrimSuffix(glob, "*"))
+		return strings.HasPrefix(path, before)
 	}
 	return glob == path
 }

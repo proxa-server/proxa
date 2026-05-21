@@ -38,7 +38,7 @@ func TestBackendPoolPickRandomHitsHealthyOnly(t *testing.T) {
 	p := NewBackendPool()
 	p.Replace(mkBackends(true, false, true)) // a, b unhealthy, c healthy → a, c only
 	seen := map[string]bool{}
-	for i := 0; i < 200; i++ {
+	for i := range 200 {
 		b := p.Pick("random")
 		if b == nil {
 			t.Fatalf("Pick returned nil at iteration %d", i)
@@ -57,7 +57,7 @@ func TestBackendPoolRoundRobinExactDistribution(t *testing.T) {
 	p := NewBackendPool()
 	p.Replace(mkBackends(true, true, true))
 	counts := map[string]int{}
-	for i := 0; i < 9; i++ {
+	for i := range 9 {
 		b := p.Pick("round-robin")
 		if b == nil {
 			t.Fatalf("Pick returned nil at %d", i)
@@ -75,7 +75,7 @@ func TestBackendPoolRoundRobinExactDistribution(t *testing.T) {
 func TestBackendPoolRoundRobinSkipsUnhealthy(t *testing.T) {
 	p := NewBackendPool()
 	p.Replace(mkBackends(true, false, true)) // a + c healthy
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		b := p.Pick("round-robin")
 		if b == nil {
 			t.Fatalf("Pick returned nil at %d", i)
@@ -94,16 +94,14 @@ func TestBackendPoolConcurrentPick(t *testing.T) {
 
 	var wg sync.WaitGroup
 	var nils atomic.Int64
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 100; j++ {
+	for range 100 {
+		wg.Go(func() {
+			for range 100 {
 				if p.Pick("round-robin") == nil {
 					nils.Add(1)
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	if nils.Load() != 0 {
@@ -119,10 +117,8 @@ func TestBackendPoolReplaceDuringPick(t *testing.T) {
 
 	var wg sync.WaitGroup
 	stop := make(chan struct{})
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 10 {
+		wg.Go(func() {
 			for {
 				select {
 				case <-stop:
@@ -131,9 +127,9 @@ func TestBackendPoolReplaceDuringPick(t *testing.T) {
 					_ = p.Pick("random")
 				}
 			}
-		}()
+		})
 	}
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		p.Replace(mkBackends(true, false, true, true))
 	}
 	close(stop)
