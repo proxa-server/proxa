@@ -86,11 +86,44 @@
     {{template "routes_table.html" .}}
   </div>
 
+  <div class="card" style="margin-top:16px;padding:12px 16px"
+       x-data="footerSysInfo()" x-init="load()">
+    <a href="/ui/system" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="color:var(--fg-3);font-size:12px">⚙️ System</span>
+      <span class="mono" style="font-size:12px" x-text="info ? info.proxa_version : '…'"></span>
+      <span style="color:var(--fg-3);font-size:11.5px">·</span>
+      <span class="mono" style="font-size:12px" x-text="info ? info.go_version : '…'"></span>
+      <span style="color:var(--fg-3);font-size:11.5px">·</span>
+      <span class="mono" style="font-size:12px"
+            x-text="info ? info.gomaxprocs + ' (' + shortSource(info.gomaxprocs_source) + ')' : '…'"></span>
+      <span style="margin-left:auto;color:var(--fg-3);font-size:11.5px">view →</span>
+    </a>
+  </div>
+
   <div class="footer">
     Read-only slim dashboard · refreshes every 5s ·
     full dashboard with login + writes lands in Feature 004
   </div>
 </div>
+
+<script>
+function footerSysInfo() {
+  return {
+    info: null,
+    load() {
+      fetch('/api/v1/system', { credentials: 'same-origin' })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { this.info = data; })
+        .catch(() => {});
+    },
+    shortSource(s) {
+      if (s === 'container_limit') return 'container';
+      if (s === 'env_override') return 'env';
+      return s;
+    },
+  };
+}
+</script>
 
 </body>
 </html>
