@@ -13,6 +13,7 @@ import (
 
 	"github.com/proxa-server/proxa/internal/auth/password"
 	"github.com/proxa-server/proxa/internal/config"
+	"github.com/proxa-server/proxa/internal/datadir"
 	"github.com/proxa-server/proxa/internal/store/sqlite"
 	"github.com/proxa-server/proxa/pkg/types"
 )
@@ -38,16 +39,21 @@ func runInit(ctx context.Context, cfg *config.Config) error {
 	}
 	fmt.Printf("created  %s/\n", cfg.DataDir)
 
-	// 2. Open + migrate SQLite.
+	// 2. Open + migrate SQLite through the data-dir sandbox.
+	root, err := datadir.Open(cfg.DataDir)
+	if err != nil {
+		return fmt.Errorf("init: open data-dir sandbox: %w", err)
+	}
+	defer root.Close()
 	st := sqlite.New()
-	dbPath := filepath.Join(cfg.DataDir, "proxa.db")
-	if err := st.Open(ctx, dbPath); err != nil {
+	if err := st.OpenInRoot(ctx, root, "proxa.db"); err != nil {
 		return err
 	}
 	defer st.Close()
 	if err := st.Migrate(ctx); err != nil {
 		return err
 	}
+	dbPath := filepath.Join(cfg.DataDir, "proxa.db")
 	fmt.Printf("created  %s (SQLite, schema v1)\n", dbPath)
 
 	// 3. Master key for future secrets (stored 0600).
