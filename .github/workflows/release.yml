@@ -73,7 +73,12 @@ jobs:
 
       - name: Verify image labels (proxa)
         run: |
-          docker manifest inspect "ghcr.io/proxa-server/proxa:${GITHUB_REF_NAME}" \
+          # GoReleaser publishes images using its `{{ .Version }}` template,
+          # which strips the leading `v` from the tag — so the tag `v0.4.2`
+          # becomes the image `:0.4.2` (matching the Docker community
+          # convention: golang:1.21.0, node:20.10.0, nginx:1.25.3, etc.).
+          VERSION="${GITHUB_REF_NAME#v}"
+          docker manifest inspect "ghcr.io/proxa-server/proxa:${VERSION}" \
             | tee /tmp/proxa-manifest.json
           # Sanity: manifest lists both architectures.
           if ! grep -q '"architecture": "amd64"' /tmp/proxa-manifest.json; then
@@ -87,7 +92,8 @@ jobs:
 
       - name: Verify image labels (proxa-agent)
         run: |
-          docker manifest inspect "ghcr.io/proxa-server/proxa-agent:${GITHUB_REF_NAME}" \
+          VERSION="${GITHUB_REF_NAME#v}"
+          docker manifest inspect "ghcr.io/proxa-server/proxa-agent:${VERSION}" \
             | tee /tmp/proxa-agent-manifest.json
           if ! grep -q '"architecture": "amd64"' /tmp/proxa-agent-manifest.json; then
             echo "::error::proxa-agent image missing amd64 manifest"

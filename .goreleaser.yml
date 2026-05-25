@@ -157,10 +157,12 @@ dockers:
       - "--label=org.opencontainers.image.description=Proxa worker-node agent (real impl lands in v0.5; v0.4.2 ships the stub)"
       - "--label=org.opencontainers.image.url=https://github.com/proxa-server/proxa"
 
-# Multi-arch manifests — one set per binary, three aliases each:
-#   - {Version}              e.g. v0.4.2  (exact tag)
-#   - v{Major}.{Minor}       e.g. v0.4    (minor stream)
-#   - latest                                (auto-updated)
+# Multi-arch manifests — one set per binary, three aliases each. We use
+# the no-`v` Docker community convention everywhere (matches golang:1.21.0,
+# node:20.10.0, nginx:1.25.3, etc.):
+#   - {Version}             e.g. 0.4.2  (exact tag, strips leading v)
+#   - {Major}.{Minor}       e.g. 0.4    (minor stream)
+#   - latest                              (auto-updated)
 docker_manifests:
   # --- proxa ---
   - name_template: "ghcr.io/proxa-server/proxa:{{ .Version }}"
@@ -168,7 +170,7 @@ docker_manifests:
       - "ghcr.io/proxa-server/proxa:{{ .Version }}-amd64"
       - "ghcr.io/proxa-server/proxa:{{ .Version }}-arm64"
 
-  - name_template: "ghcr.io/proxa-server/proxa:v{{ .Major }}.{{ .Minor }}"
+  - name_template: "ghcr.io/proxa-server/proxa:{{ .Major }}.{{ .Minor }}"
     image_templates:
       - "ghcr.io/proxa-server/proxa:{{ .Version }}-amd64"
       - "ghcr.io/proxa-server/proxa:{{ .Version }}-arm64"
@@ -184,7 +186,7 @@ docker_manifests:
       - "ghcr.io/proxa-server/proxa-agent:{{ .Version }}-amd64"
       - "ghcr.io/proxa-server/proxa-agent:{{ .Version }}-arm64"
 
-  - name_template: "ghcr.io/proxa-server/proxa-agent:v{{ .Major }}.{{ .Minor }}"
+  - name_template: "ghcr.io/proxa-server/proxa-agent:{{ .Major }}.{{ .Minor }}"
     image_templates:
       - "ghcr.io/proxa-server/proxa-agent:{{ .Version }}-amd64"
       - "ghcr.io/proxa-server/proxa-agent:{{ .Version }}-arm64"
