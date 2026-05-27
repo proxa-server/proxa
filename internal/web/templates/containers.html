@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proxa · Containers</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/htmx.min.js" defer></script>
+<script src="/static/alpine.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="/ui/">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="2" width="20" height="20" rx="6" fill="#2a9d8f" opacity=".15"/>
+      <path d="M7 8h4a3 3 0 0 1 0 6H7V8z" stroke="#2a9d8f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17 8v8" stroke="#2a9d8f" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="17" cy="8" r="1.5" fill="#2a9d8f"/>
+    </svg>
+    <span class="wordmark">Proxa</span>
+    <span class="badge">Containers</span>
+  </a>
+  <div class="cluster-status">
+    <a href="/ui/" style="color:var(--fg-2);text-decoration:none">← Back to dashboard</a>
+  </div>
+</nav>
+
+<div class="container" x-data="containersController()" x-init="load(); poll()">
+
+  <div class="card" style="padding:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h1 style="margin:0;font-size:18px">📦 Host containers</h1>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label style="font-size:12px;color:var(--fg-3);display:flex;gap:6px;align-items:center">
+          <input type="checkbox" x-model="hostOnly" @change="load()"> host only
+        </label>
+        <button @click="load()" class="chip chip-neutral" style="border:none;cursor:pointer">
+          🔄 Refresh
+        </button>
+      </div>
+    </div>
+
+    <div x-show="err" x-text="err" style="color:#e63946"></div>
+    <div x-show="!rows.length && !err" style="color:var(--fg-3);padding:24px 0">no containers</div>
+
+    <table x-show="filtered().length" style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);color:var(--fg-3);text-align:left">
+          <th style="padding:8px 12px 8px 0">Name</th>
+          <th style="padding:8px 12px 8px 0">Image</th>
+          <th style="padding:8px 12px 8px 0;width:80px">State</th>
+          <th style="padding:8px 12px 8px 0;width:90px">Owner</th>
+          <th style="padding:8px 0;width:260px">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="c in filtered()" :key="c.id">
+          <tr style="border-bottom:1px solid var(--border)">
+            <td class="mono" style="padding:8px 12px 8px 0" x-text="c.name"></td>
+            <td class="mono" style="padding:8px 12px 8px 0;color:var(--fg-3)" x-text="c.image"></td>
+            <td class="mono" style="padding:8px 12px 8px 0" :style="c.state==='running' ? 'color:#2a9d8f' : 'color:var(--fg-3)'" x-text="c.state"></td>
+            <td style="padding:8px 12px 8px 0">
+              <span x-show="c.managed" class="chip chip-neutral" style="font-size:11px"
+                    :title="'project=' + c.project + ' / service=' + c.service + ' / replica=' + c.replica">
+                proxa
+              </span>
+              <span x-show="!c.managed" class="chip chip-neutral" style="font-size:11px;background:#f0f0f0">host</span>
+            </td>
+            <td style="padding:8px 0">
+              <template x-if="c.managed">
+                <span style="color:var(--fg-3);font-size:11px"
+                      title="Managed by Proxa — use `proxa scale` or update the TOML">
+                  managed (use proxa CLI)
+                </span>
+              </template>
+              <template x-if="!c.managed">
+                <div style="display:flex;gap:4px">
+                  <button @click="doAction(c.id, 'start')" :disabled="c.state==='running'"
+                          class="chip chip-neutral" style="border:none;cursor:pointer;font-size:11px"
+                          :style="c.state==='running' ? 'opacity:.4;cursor:not-allowed' : ''">Start</button>
+                  <button @click="doAction(c.id, 'stop')" :disabled="c.state!=='running'"
+                          class="chip chip-neutral" style="border:none;cursor:pointer;font-size:11px"
+                          :style="c.state!=='running' ? 'opacity:.4;cursor:not-allowed' : ''">Stop</button>
+                  <button @click="doAction(c.id, 'restart')" :disabled="c.state!=='running'"
+                          class="chip chip-neutral" style="border:none;cursor:pointer;font-size:11px"
+                          :style="c.state!=='running' ? 'opacity:.4;cursor:not-allowed' : ''">Restart</button>
+                  <button @click="confirmRemove(c)"
+                          class="chip chip-neutral" style="border:none;cursor:pointer;font-size:11px;color:#e63946"
+                          x-text="pendingRemove === c.id ? 'Confirm?' : 'Remove'"></button>
+                </div>
+              </template>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <div x-show="actionErr" x-text="actionErr"
+         style="color:#e63946;margin-top:12px;padding:8px 12px;background:#fdecea;border-radius:4px;font-size:12px"></div>
+  </div>
+</div>
+
+<script>
+function containersController() {
+  return {
+    rows: [],
+    err: '',
+    actionErr: '',
+    hostOnly: true,
+    pendingRemove: '',
+    pendingRemoveTimer: null,
+
+    async load() {
+      this.err = '';
+      try {
+        const resp = await fetch('/api/v1/host-containers', {credentials:'same-origin'});
+        if (!resp.ok) { this.err = 'load failed: ' + resp.status; return; }
+        const data = await resp.json();
+        this.rows = data.containers || [];
+      } catch (e) { this.err = 'network error: ' + e.message; }
+    },
+
+    filtered() {
+      if (!this.hostOnly) return this.rows;
+      return this.rows.filter(c => !c.managed);
+    },
+
+    poll() { setInterval(() => this.load(), 10_000); },
+
+    async doAction(id, action) {
+      this.actionErr = '';
+      try {
+        const resp = await fetch('/api/v1/host-containers/' + id + '/' + action, {
+          method: 'POST', credentials: 'same-origin'
+        });
+        if (!resp.ok) {
+          const body = await resp.text();
+          this.actionErr = action + ' failed (' + resp.status + '): ' + body.trim();
+        }
+        await this.load();
+      } catch (e) { this.actionErr = 'network error: ' + e.message; }
+    },
+
+    confirmRemove(c) {
+      if (this.pendingRemove === c.id) {
+        clearTimeout(this.pendingRemoveTimer);
+        this.pendingRemove = '';
+        this.removeNow(c.id);
+        return;
+      }
+      this.pendingRemove = c.id;
+      this.pendingRemoveTimer = setTimeout(() => { this.pendingRemove = ''; }, 3000);
+    },
+
+    async removeNow(id) {
+      this.actionErr = '';
+      try {
+        const resp = await fetch('/api/v1/host-containers/' + id, {
+          method: 'DELETE', credentials: 'same-origin'
+        });
+        if (!resp.ok) {
+          const body = await resp.text();
+          this.actionErr = 'remove failed (' + resp.status + '): ' + body.trim();
+        }
+        await this.load();
+      } catch (e) { this.actionErr = 'network error: ' + e.message; }
+    }
+  };
+}
+</script>
+
+</body>
+</html>
