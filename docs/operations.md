@@ -409,6 +409,39 @@ sqlite3 /var/lib/proxa/proxa.db "VACUUM;"
 A 30-day window keeps the table small (~10 MB per 100k events) without
 losing recent troubleshooting context.
 
+## Host containers (v0.4.4+)
+
+The `/ui/containers` page lists every container the Docker daemon
+knows about — Proxa-managed alongside host containers. Operators can
+start, stop, restart, and remove **host** containers from the UI.
+Proxa-managed containers are read-only with a tooltip explaining
+that `proxa scale` (or a TOML edit) is the right tool.
+
+**API:** `GET /api/v1/host-containers` returns the full list as JSON,
+each entry tagged with `managed: bool`. Five write endpoints:
+
+```
+POST   /api/v1/host-containers/{id}/start
+POST   /api/v1/host-containers/{id}/stop
+POST   /api/v1/host-containers/{id}/restart
+DELETE /api/v1/host-containers/{id}        # ?force=true to remove running
+```
+
+Each write that targets a managed container returns `409 Conflict`.
+
+**Audit trail:** every successful write lands a `user.container.<verb>`
+event in the v0.4.3 events table, with the actor field hard-coded to
+`subject:bootstrap-admin` in v0.4.4. (Multi-user RBAC + per-subject
+attribution lands in v0.5.)
+
+**Scope note (token power):**
+
+Any holder of the bootstrap token can start/stop/restart/remove any
+host container on the box. That is approximately equivalent to giving
+them docker-socket access. v0.4.4 is intended for single-operator
+homelab deployments. Multi-operator deployments should wait for v0.5
+multi-user RBAC, or restrict token distribution accordingly.
+
 ## SQLite migrations (v0.4.3+)
 
 `proxa server` runs schema migrations idempotently on every start.

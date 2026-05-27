@@ -107,6 +107,12 @@ func (s *strategyRuntime) InspectContainer(_ context.Context, id string) (*rt.Co
 func (s *strategyRuntime) ListContainers(context.Context, rt.ListFilter) ([]rt.ContainerInfo, error) {
 	return nil, nil
 }
+func (s *strategyRuntime) ListAllContainers(context.Context) ([]rt.ContainerInfo, error) {
+	return nil, nil
+}
+func (s *strategyRuntime) RestartContainer(context.Context, string, time.Duration) error {
+	return nil
+}
 func (s *strategyRuntime) StreamLogs(context.Context, string, rt.LogOpts) (io.ReadCloser, error) {
 	return nil, errors.New("not implemented")
 }

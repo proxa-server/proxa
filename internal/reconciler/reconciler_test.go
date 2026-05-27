@@ -90,6 +90,10 @@ func (f *fakeRuntime) CreateContainer(ctx context.Context, spec rt.ContainerSpec
 }
 func (f *fakeRuntime) StartContainer(context.Context, string) error          { return nil }
 func (f *fakeRuntime) StopContainer(context.Context, string, time.Duration) error { return nil }
+func (f *fakeRuntime) RestartContainer(context.Context, string, time.Duration) error { return nil }
+func (f *fakeRuntime) ListAllContainers(context.Context) ([]rt.ContainerInfo, error) {
+	return nil, nil
+}
 func (f *fakeRuntime) RemoveContainer(context.Context, string, bool) error    { return nil }
 func (f *fakeRuntime) RenameContainer(context.Context, string, string) error  { return nil }
 func (f *fakeRuntime) InspectContainer(context.Context, string) (*rt.ContainerInfo, error) {

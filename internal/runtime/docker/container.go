@@ -22,6 +22,7 @@ type containerClient interface {
 		network *network.NetworkingConfig, platform *ocispec.Platform, name string) (container.CreateResponse, error)
 	ContainerStart(ctx context.Context, id string, options container.StartOptions) error
 	ContainerStop(ctx context.Context, id string, options container.StopOptions) error
+	ContainerRestart(ctx context.Context, id string, options container.StopOptions) error
 	ContainerRemove(ctx context.Context, id string, options container.RemoveOptions) error
 	ContainerRename(ctx context.Context, id, newName string) error
 	ContainerInspect(ctx context.Context, id string) (container.InspectResponse, error)
@@ -63,6 +64,20 @@ func (r *Runtime) StopContainer(ctx context.Context, id string, gracePeriod time
 	secs := int(gracePeriod.Seconds())
 	if err := r.cli.ContainerStop(ctx, id, container.StopOptions{Timeout: &secs}); err != nil {
 		return fmt.Errorf("runtime/docker: stop %q: %w", id, err)
+	}
+	return nil
+}
+
+// RestartContainer restarts a container in place (atomic w.r.t. cgroup
+// teardown). gracePeriod is the SIGTERM-to-SIGKILL window applied to
+// the stop half of the restart; gracePeriod <= 0 falls back to 10s.
+func (r *Runtime) RestartContainer(ctx context.Context, id string, gracePeriod time.Duration) error {
+	if gracePeriod <= 0 {
+		gracePeriod = 10 * time.Second
+	}
+	secs := int(gracePeriod.Seconds())
+	if err := r.cli.ContainerRestart(ctx, id, container.StopOptions{Timeout: &secs}); err != nil {
+		return fmt.Errorf("runtime/docker: restart %q: %w", id, err)
 	}
 	return nil
 }
@@ -119,6 +134,32 @@ func (r *Runtime) InspectContainer(ctx context.Context, id string) (*runtime.Con
 		}
 	}
 	return info, nil
+}
+
+// ListAllContainers returns every container the daemon knows about —
+// Proxa-managed AND host. Used by the v0.4.4 Containers dashboard.
+// The proxa.project label is included on managed rows; absent on host
+// rows. Includes stopped containers (All=true).
+func (r *Runtime) ListAllContainers(ctx context.Context) ([]runtime.ContainerInfo, error) {
+	summaries, err := r.cli.ContainerList(ctx, container.ListOptions{All: true})
+	if err != nil {
+		return nil, fmt.Errorf("runtime/docker: list all containers: %w", err)
+	}
+	out := make([]runtime.ContainerInfo, 0, len(summaries))
+	for _, s := range summaries {
+		name := ""
+		if len(s.Names) > 0 {
+			name = s.Names[0]
+		}
+		out = append(out, runtime.ContainerInfo{
+			ID:     s.ID,
+			Name:   name,
+			Image:  s.Image,
+			State:  s.State,
+			Labels: s.Labels,
+		})
+	}
+	return out, nil
 }
 
 // ListContainers returns Proxa-managed containers in the given project.

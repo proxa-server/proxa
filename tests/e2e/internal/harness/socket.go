@@ -55,6 +55,50 @@ func GetViaSocket(t *testing.T, dir, token, path string) string {
 	return string(b)
 }
 
+// PostViaSocketStatus runs an HTTP POST via the Unix socket and
+// returns the response status code. Does NOT fatal on non-2xx — the
+// caller asserts the expected status. Body is discarded; callers that
+// need a body should use the lower-level pattern from GetViaSocket.
+func PostViaSocketStatus(t *testing.T, dir, token, path string) int {
+	t.Helper()
+	return doViaSocketStatus(t, dir, token, http.MethodPost, path)
+}
+
+// DeleteViaSocketStatus runs an HTTP DELETE via the Unix socket and
+// returns the response status code. Does NOT fatal on non-2xx.
+func DeleteViaSocketStatus(t *testing.T, dir, token, path string) int {
+	t.Helper()
+	return doViaSocketStatus(t, dir, token, http.MethodDelete, path)
+}
+
+func doViaSocketStatus(t *testing.T, dir, token, method, path string) int {
+	t.Helper()
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				var d net.Dialer
+				return d.DialContext(ctx, "unix", SocketPath(t, dir))
+			},
+		},
+	}
+	req, _ := http.NewRequest(method, "http://x"+path, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("%s %s: %v", method, path, err)
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+	return resp.StatusCode
+}
+
+// WriteFile is a tiny os.WriteFile wrapper that makes tests less
+// verbose (writes with mode 0o600).
+func WriteFile(path, content string) error {
+	return os.WriteFile(path, []byte(content), 0o600)
+}
+
 // SSERequest opens a long-lived streaming request via the Unix socket
 // and returns the live response (caller closes resp.Body). The Accept
 // header is set to text/event-stream so the server takes the SSE branch.

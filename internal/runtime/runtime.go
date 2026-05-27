@@ -40,10 +40,17 @@ type Runtime interface {
 	CreateContainer(ctx context.Context, spec ContainerSpec) (id string, err error)
 	StartContainer(ctx context.Context, id string) error
 	StopContainer(ctx context.Context, id string, gracePeriod time.Duration) error
+	RestartContainer(ctx context.Context, id string, gracePeriod time.Duration) error
 	RemoveContainer(ctx context.Context, id string, force bool) error
 	RenameContainer(ctx context.Context, id, newName string) error
 	InspectContainer(ctx context.Context, id string) (*ContainerInfo, error)
 	ListContainers(ctx context.Context, filter ListFilter) ([]ContainerInfo, error)
+	// ListAllContainers returns every container the runtime can see, with
+	// no project filter. Used by the Containers dashboard (v0.4.4+) to
+	// surface host containers alongside Proxa-managed ones. Implementations
+	// MUST include the proxa.project label in the returned ContainerInfo
+	// so the caller can distinguish managed from host.
+	ListAllContainers(ctx context.Context) ([]ContainerInfo, error)
 
 	// Observability
 	StreamLogs(ctx context.Context, id string, opts LogOpts) (io.ReadCloser, error)
@@ -148,9 +155,13 @@ func (noopRuntime) CreateContainer(context.Context, ContainerSpec) (string, erro
 }
 func (noopRuntime) StartContainer(context.Context, string) error                       { return ErrNotImplemented }
 func (noopRuntime) StopContainer(context.Context, string, time.Duration) error         { return ErrNotImplemented }
+func (noopRuntime) RestartContainer(context.Context, string, time.Duration) error      { return ErrNotImplemented }
 func (noopRuntime) RemoveContainer(context.Context, string, bool) error                { return ErrNotImplemented }
 func (noopRuntime) RenameContainer(context.Context, string, string) error              { return ErrNotImplemented }
 func (noopRuntime) InspectContainer(context.Context, string) (*ContainerInfo, error)   { return nil, ErrNotImplemented }
+func (noopRuntime) ListAllContainers(context.Context) ([]ContainerInfo, error) {
+	return nil, ErrNotImplemented
+}
 func (noopRuntime) ListContainers(context.Context, ListFilter) ([]ContainerInfo, error) {
 	return nil, ErrNotImplemented
 }

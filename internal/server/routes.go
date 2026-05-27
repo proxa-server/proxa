@@ -24,5 +24,12 @@ func (s *Server) MountRoutes() {
 		r.Get("/routes", s.handleListRoutes)
 		r.Get("/ingress", s.handleGetIngress)
 		r.Get("/events", s.handleListEvents)
+		r.Route("/host-containers", func(r chi.Router) {
+			r.Get("/", s.handleListHostContainers)
+			r.Post("/{id}/start", s.handleHostContainerAction("start"))
+			r.Post("/{id}/stop", s.handleHostContainerAction("stop"))
+			r.Post("/{id}/restart", s.handleHostContainerAction("restart"))
+			r.Delete("/{id}", s.handleHostContainerRemove)
+		})
 	})
 }

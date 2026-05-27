@@ -28,6 +28,10 @@ func (fakeRuntime) CreateContainer(context.Context, runtime.ContainerSpec) (stri
 }
 func (fakeRuntime) StartContainer(context.Context, string) error                       { return nil }
 func (fakeRuntime) StopContainer(context.Context, string, time.Duration) error         { return nil }
+func (fakeRuntime) RestartContainer(context.Context, string, time.Duration) error      { return nil }
+func (fakeRuntime) ListAllContainers(context.Context) ([]runtime.ContainerInfo, error) {
+	return nil, nil
+}
 func (fakeRuntime) RemoveContainer(context.Context, string, bool) error                { return nil }
 func (fakeRuntime) RenameContainer(context.Context, string, string) error              { return nil }
 func (fakeRuntime) InspectContainer(context.Context, string) (*runtime.ContainerInfo, error) {
