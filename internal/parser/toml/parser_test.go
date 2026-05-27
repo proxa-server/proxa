@@ -109,5 +109,6 @@ func tryParse(t *testing.T, name string) (types.TaskDef, error) {
 		t.Fatalf("open fixture: %v", err)
 	}
 	defer f.Close()
-	return Parse(f)
+	res, err := Parse(f)
+	return res.TaskDef, err
 }

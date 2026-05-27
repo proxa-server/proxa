@@ -2,9 +2,11 @@ package reconciler
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
+	"github.com/proxa-server/proxa/internal/events"
 	"github.com/proxa-server/proxa/internal/ingress"
 	"github.com/proxa-server/proxa/internal/probe"
 	rt "github.com/proxa-server/proxa/internal/runtime"
@@ -20,6 +22,7 @@ type Reconciler struct {
 	runtime  rt.Runtime
 	probes   *probe.Manager
 	ingress  ingress.IngressController
+	events   *events.Store // optional; nil => no event audit
 	interval time.Duration
 	poke     chan struct{}
 	logger   *slog.Logger
@@ -31,6 +34,7 @@ type Options struct {
 	Logger       *slog.Logger              // default slog.Default()
 	Probes       *probe.Manager            // required; pass probe.New(runtime, logger)
 	Ingress      ingress.IngressController // optional; reconciler skips ingress push when nil
+	Events       *events.Store             // optional; v0.4.3+ audit log; nil = silent
 }
 
 // New returns a Reconciler ready for Run.
@@ -50,9 +54,28 @@ func New(s store.StateStore, runtime rt.Runtime, opts Options) *Reconciler {
 		runtime:  runtime,
 		probes:   probes,
 		ingress:  opts.Ingress,
+		events:   opts.Events,
 		interval: opts.TickInterval,
 		poke:     make(chan struct{}, 1),
 		logger:   opts.Logger,
+	}
+}
+
+// emitEvent writes one event row. Best-effort: failures are logged but
+// never propagated — an event store outage must not block the
+// reconciler tick. No-op when r.events is nil (production server wires
+// one in, but unit tests don't always).
+func (r *Reconciler) emitEvent(ctx context.Context, typ, target, payload string) {
+	if r.events == nil {
+		return
+	}
+	if _, err := r.events.Append(ctx, events.Event{
+		Type:    typ,
+		Actor:   events.ActorReconciler,
+		Target:  target,
+		Payload: payload,
+	}); err != nil {
+		r.logger.Warn("events.Append failed", "type", typ, "target", target, "err", err)
 	}
 }
 
@@ -162,6 +185,7 @@ func (r *Reconciler) reconcileProject(ctx context.Context, project string) {
 			}
 			r.logger.Info("action applied", "type", a.Type, "project", a.Project,
 				"service", a.Service, "replica", a.Replica, "reason", a.Reason)
+			r.emitActionEvent(ctx, a)
 		}
 		// Refresh actual state so probe wiring + status aggregation see
 		// containers we just created.
@@ -294,11 +318,15 @@ func (r *Reconciler) updateProbesAndStatus(ctx context.Context, project string, 
 		}
 		newStatus := Aggregate(svc.Spec.Replicas, snaps)
 		if newStatus != svc.Status {
+			prev := svc.Status
 			svc.Status = newStatus
 			if err := r.store.PutService(ctx, project, svc); err != nil {
 				r.logger.Error("persist service status", "project", project, "service", svc.Name, "err", err)
 			} else {
 				r.logger.Info("service status changed", "project", project, "service", svc.Name, "status", newStatus)
+				r.emitEvent(ctx, events.TypeServiceStatusChanged,
+					events.TargetService(project, svc.Name),
+					fmt.Sprintf(`{"from":%q,"to":%q}`, prev, newStatus))
 			}
 		}
 	}
@@ -364,6 +392,27 @@ func backendDial(spec types.TaskDef) (string, int) {
 		return "127.0.0.1", spec.Expose[0].Host
 	}
 	return "", containerPort
+}
+
+// emitActionEvent maps a reconciler Action onto an audit event. Called
+// only after Apply returns nil — failed actions are surfaced via logs
+// (audit-trail of attempted-but-failed work is intentionally out of
+// scope for v0.4.3; revisit when scheduler dead-letter lands in v0.5).
+func (r *Reconciler) emitActionEvent(ctx context.Context, a Action) {
+	target := events.TargetService(a.Project, a.Service)
+	payload := fmt.Sprintf(`{"replica":%d,"reason":%q}`, a.Replica, a.Reason)
+	switch a.Type {
+	case ActionCreate:
+		r.emitEvent(ctx, events.TypeReconcilerCreate, target, payload)
+	case ActionRemove:
+		r.emitEvent(ctx, events.TypeReconcilerRemove, target, payload)
+	case ActionReplace:
+		// Replace is implemented as a stop-old + start-new pair; the
+		// event semantics that operators want to see are "we restarted
+		// replica N because <reason>" — model it as a scale event with
+		// payload distinguishing the cause.
+		r.emitEvent(ctx, events.TypeReconcilerScale, target, payload)
+	}
 }
 
 // _ keeps types reachable for future test helpers.

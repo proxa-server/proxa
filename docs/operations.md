@@ -359,3 +359,80 @@ for a future release:
 Each can be added without breaking existing operators; the contract
 of the release pipeline (binaries + checksums + images + manifests)
 stays stable.
+
+---
+
+## Audit log + Events panel (v0.4.3+)
+
+Every reconciler action (`create`, `remove`, replica replace) plus every
+service status change is recorded in the SQLite `events` table.
+
+**Where to look:**
+
+- **Dashboard:** `/ui/events` is the full-page audit log viewer.
+  Supports a target filter (e.g. `service:default/api`,
+  `container:abc123…`) and a result-limit selector (50 / 100 / 250 /
+  1000).
+- **Dashboard index:** the "Recent events" card on `/ui/` shows the
+  last 10 events, polling every 5 seconds.
+- **API:** `GET /api/v1/events?target=<>&since=<RFC3339>&limit=<1..1000>`
+  returns `{"events":[{id,at,type,actor,target,payload},...]}` as JSON.
+  Returns `503` when the server was started without an events store
+  wired (unit-test paths; production `proxa server` always wires one).
+
+**Event type vocabulary** (see `internal/events/event.go` for the canonical list):
+
+| Type                       | Emitter      | Triggered by                                         |
+|----------------------------|--------------|------------------------------------------------------|
+| `reconciler.create`        | reconciler   | a new container was created + started                |
+| `reconciler.remove`        | reconciler   | a container was removed (scale-down, replace cleanup) |
+| `reconciler.scale`         | reconciler   | a Replace action (rolling restart / spec change)     |
+| `service.status_changed`   | reconciler   | aggregated status flipped (e.g. degraded → ready)    |
+
+Future emitters (v0.4.4+): `user.container.{start,stop,restart,remove}`
+land with the Container UI; webhook plugins (v0.5+) subscribe to all
+event types via the `internal/plugin` bus.
+
+**Retention guidance:**
+
+The events table grows monotonically — there is **no built-in retention
+sweep** in v0.4.3 (deferred to v0.5 along with the cluster store). For
+high-churn deployments, run a manual purge against the SQLite database
+during a maintenance window:
+
+```sh
+sqlite3 /var/lib/proxa/proxa.db \
+    "DELETE FROM events WHERE ts < strftime('%s','now','-30 days')*1000;"
+sqlite3 /var/lib/proxa/proxa.db "VACUUM;"
+```
+
+A 30-day window keeps the table small (~10 MB per 100k events) without
+losing recent troubleshooting context.
+
+## SQLite migrations (v0.4.3+)
+
+`proxa server` runs schema migrations idempotently on every start.
+Migrations are versioned (`schema_version` table) and atomic (each
+migration runs inside one transaction). The migration registry lives
+in `internal/store/sqlite/migrations.go`; v0.4.3 introduces the events
+table as migration v2.
+
+**Operator-visible:**
+
+- A first-time start runs every migration in order. The server logs each
+  one at INFO level: `store/sqlite: applied migration vN`.
+- A re-start on the same schema is a no-op.
+- A migration failure aborts startup (the data file is left at the prior
+  schema version — never partially-migrated).
+- Downgrade is not supported. To roll back from v0.4.3 → v0.4.2, restore
+  a pre-upgrade backup of `proxa.db`; the events table will simply be
+  ignored by the older binary.
+
+**Future-proofing for v0.5+ multi-host:**
+
+The single-node `internal/cluster.SingleNode` stub satisfies the
+Membership + StateStore + Scheduler interfaces, returning the local node
+for every query. v0.5 will swap in an embedded-etcd implementation
+without any reconciler-side change. The Snapshot interface in
+`internal/state` is similarly stubbed and lands its real implementation
+alongside time-travel in v0.6.

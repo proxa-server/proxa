@@ -2,9 +2,24 @@ package types
 
 import "time"
 
+// Meta is the optional [meta] block in proxa.toml v1 — author-declared
+// metadata about the document, used for forward compatibility.
+//
+//   - ProxaVersion is the minimum Proxa binary version the document expects
+//     (e.g., "0.4.3"). Empty means "any". The parser compares this against
+//     the running binary's semver; if the binary is older, the parse fails
+//     with a clear error so operators know to upgrade rather than silently
+//     ignoring a field they thought they declared.
+//
+// See docs/proxa-toml-v1.md for the formal spec.
+type Meta struct {
+	ProxaVersion string `toml:"proxa_version" json:"proxaVersion,omitempty"`
+}
+
 // TaskDef is the parsed representation of a user TOML file describing
 // a service or a job. It is the input to the reconciliation loop.
 type TaskDef struct {
+	Meta      Meta              `toml:"meta"      json:"meta,omitempty"`
 	Project   string            `toml:"project"   json:"project"`
 	Name      string            `toml:"name"      json:"name"`
 	Image     string            `toml:"image"     json:"image"`

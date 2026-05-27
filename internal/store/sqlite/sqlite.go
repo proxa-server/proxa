@@ -83,6 +83,12 @@ func (s *Store) Open(ctx context.Context, dsn string) error {
 	return nil
 }
 
+// DB returns the underlying *sql.DB. Reserved for sibling packages
+// that need to layer their own tables on top of the same connection
+// pool (e.g., the events package — added in v0.4.3). Returns nil
+// before Open has been called.
+func (s *Store) DB() *sql.DB { return s.db }
+
 // Close releases the underlying connection pool.
 func (s *Store) Close() error {
 	if s.db == nil {
