@@ -13,6 +13,7 @@ import (
 // a new entry here; Migrate then applies it on next start.
 var schemaMigrations = []migration{
 	{version: 1, apply: migrateV1},
+	{version: 2, apply: migrateV2},
 }
 
 type migration struct {
@@ -153,6 +154,39 @@ func migrateV1(ctx context.Context, tx *sql.Tx) error {
 		}
 		if err != nil {
 			return fmt.Errorf("v1 stmt failed: %w", err)
+		}
+	}
+	return nil
+}
+
+// migrateV2 adds the events table (specs/007-architectural-foundations).
+// Lands in v0.4.3 — keystone for the audit log + v0.6 time-travel + v0.5
+// rollback metadata + v0.5 webhook event payloads.
+//
+// Schema:
+//   - ts in unix milliseconds (sortable, compact, easy to bench)
+//   - type: short dotted identifier like "reconciler.create" / "user.container.stop"
+//   - actor: "reconciler", "subject:<id>", "system:<name>"
+//   - target: "service:<project>/<name>" / "container:<id>" / "node:<id>"
+//   - payload: JSON blob — type-specific fields
+//
+// Two indexes: ts-only for chronological scans, (target, ts) for per-target tail.
+func migrateV2(ctx context.Context, tx *sql.Tx) error {
+	stmts := []string{
+		`CREATE TABLE events (
+			id      INTEGER PRIMARY KEY AUTOINCREMENT,
+			ts      INTEGER NOT NULL,
+			type    TEXT NOT NULL,
+			actor   TEXT NOT NULL,
+			target  TEXT NOT NULL,
+			payload TEXT NOT NULL
+		)`,
+		`CREATE INDEX idx_events_ts ON events(ts)`,
+		`CREATE INDEX idx_events_target_ts ON events(target, ts)`,
+	}
+	for _, stmt := range stmts {
+		if _, err := tx.ExecContext(ctx, stmt); err != nil {
+			return fmt.Errorf("v2 stmt failed: %w", err)
 		}
 	}
 	return nil
