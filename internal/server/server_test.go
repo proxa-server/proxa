@@ -137,12 +137,16 @@ func (noopRuntime) InspectImage(context.Context, string) (*rt.ImageInfo, error) 
 func (noopRuntime) CreateContainer(context.Context, rt.ContainerSpec) (string, error) { return "", nil }
 func (noopRuntime) StartContainer(context.Context, string) error                       { return nil }
 func (noopRuntime) StopContainer(context.Context, string, time.Duration) error         { return nil }
+func (noopRuntime) RestartContainer(context.Context, string, time.Duration) error      { return nil }
 func (noopRuntime) RemoveContainer(context.Context, string, bool) error                { return nil }
 func (noopRuntime) RenameContainer(context.Context, string, string) error              { return nil }
 func (noopRuntime) InspectContainer(context.Context, string) (*rt.ContainerInfo, error) {
 	return nil, errors.New("no")
 }
 func (noopRuntime) ListContainers(context.Context, rt.ListFilter) ([]rt.ContainerInfo, error) {
+	return nil, nil
+}
+func (noopRuntime) ListAllContainers(context.Context) ([]rt.ContainerInfo, error) {
 	return nil, nil
 }
 func (noopRuntime) StreamLogs(context.Context, string, rt.LogOpts) (io.ReadCloser, error) {
