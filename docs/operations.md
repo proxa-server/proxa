@@ -155,3 +155,207 @@ If you're deploying Proxa inside a CPU-limited container and the
 source reports `host`, double-check the cgroup setup — Proxa is
 probably running with full host scheduling rights, which may cause
 noisy-neighbor issues.
+
+## install.sh hosting via GitHub Pages (v0.4.2+)
+
+The canonical operator one-liner is:
+
+```sh
+curl -fsSL https://proxa-server.github.io/proxa/install/install.sh | sh
+```
+
+`docs/install/install.sh` is a verbatim mirror of the repo-root
+`install.sh`, kept in sync by the release workflow (`make
+mirror-install` after each release).
+
+### One-time setup (manual, repo admin only)
+
+GitHub Pages cannot be enabled from a workflow — this is a one-time
+manual setup. Once done it persists for the life of the repo.
+
+1. Open `https://github.com/proxa-server/proxa/settings/pages`
+2. **Source**: `Deploy from a branch`
+3. **Branch**: `main`, folder `/docs`
+4. Save
+
+Within ~30 seconds the install.sh becomes reachable at the canonical
+URL above.
+
+### Verifying the published install.sh
+
+```sh
+curl -fsSL https://proxa-server.github.io/proxa/install/install.sh | head -1
+# Expected: #!/bin/sh
+```
+
+If the URL 404s, the Pages setup step above was probably skipped.
+
+### Future migration to a custom CNAME
+
+If the project picks up a domain like `proxa.sh`, the canonical URL
+can shift to `https://get.proxa.sh/install.sh` via a Pages CNAME
+record. Until then the GitHub Pages URL is the official answer.
+
+## Coverage gate (`make cover`, v0.4.2+)
+
+`make cover` runs the test suite with `-coverprofile`, generates an
+HTML report at `coverage.html`, and runs `cmd/coverage-gate` which
+prints a per-package coverage table.
+
+### Reading the output
+
+```
+Coverage report (threshold: 60%, 24 packages, 2 allowlisted)
+
+  Package                                                          Coverage
+  -------                                                          --------
+⚠ github.com/proxa-server/proxa/internal/server                       20.1%
+⚠ github.com/proxa-server/proxa/internal/cli                          24.4%
+~ github.com/proxa-server/proxa/internal/web                       n/a (allowlisted)
+  github.com/proxa-server/proxa/internal/security                  100.0%
+```
+
+- `⚠` prefix → below the 60% baseline (action: write tests or add to
+  allowlist with a rationale)
+- `~` prefix → on the `.coverage-allowlist` (no action; suppressed
+  from the warning set)
+- no prefix → at-or-above baseline
+
+### Allowlist usage
+
+The `.coverage-allowlist` file at repo root holds packages exempt from
+the gate. Comment-friendly format:
+
+```
+# Reason: HTML templates — coverage meaningless for embedded assets.
+github.com/proxa-server/proxa/internal/web
+
+# Reason: wire-format types only — no executable behavior to cover.
+github.com/proxa-server/proxa/pkg/types
+```
+
+When adding an entry, include a one-line `# Reason:` comment so future
+maintainers know why the package is exempt.
+
+### Reporting-only in v0.4.2
+
+`cmd/coverage-gate` always exits 0 in v0.4.2. The threshold is purely
+informational. A future release (likely v0.4.3 or v0.5) flips the
+exit code to signal threshold violations, gating CI. That change
+requires:
+
+1. Per-package coverage stabilization across releases (no surprise
+   drops from refactors).
+2. Allowlist seed for genuinely-untestable packages.
+3. Workflow change to honor the exit code.
+
+Until then `make cover` is a diagnostic tool, not a gate.
+
+### JSON mode for CI integration
+
+```sh
+go run ./cmd/coverage-gate -format=json -threshold=60 \
+  -allowlist=.coverage-allowlist coverage.out
+```
+
+Suitable for piping to `jq` in CI scripts for trend dashboards.
+
+## Container deployment (v0.4.2+)
+
+Proxa publishes multi-arch container images on every release:
+
+```sh
+# control plane
+docker run -d --name proxa \
+  -v proxa-data:/data \
+  -p 8080:8080 -p 80:80 -p 443:443 \
+  ghcr.io/proxa-server/proxa:v0.4.2 server
+
+# agent (v0.5+ functionality; v0.4.2 ships the stub image as gate)
+docker run -d --name proxa-agent \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  ghcr.io/proxa-server/proxa-agent:v0.4.2 connect <control-url>
+```
+
+### Image properties
+
+- `FROM scratch` (single static binary, no shell, no libc, no package manager)
+- Runs as nonroot user `65532:65532`
+- Multi-arch: `linux/amd64` + `linux/arm64`
+- OCI labels: `org.opencontainers.image.source/version/revision/licenses=Apache-2.0/title/description/url`
+- Size budgets (soft): `proxa` < 80 MB compressed, `proxa-agent` < 40 MB
+- `PROXA_DISTRIBUTION=docker` env baked in — System Info reports `"distribution":"docker"`
+
+### Persisted state
+
+The control-plane image mounts `/data` as a volume:
+
+- `/data/proxa.db` — SQLite (services, projects, subjects, policies, events)
+- `/data/secrets.key` — age master key (mode 0600)
+- `/data/admin-token` — bootstrap admin token (mode 0600)
+- `/data/certs/` — CertMagic cache (when ingress TLS=true)
+
+Use a named volume or bind mount for `/data` — otherwise data is
+lost on container restart.
+
+## Bench expectations (v0.4.2+)
+
+`make bench` runs the benchmark suite across `bench/` + per-package
+benches in reconciler/probe/ingress. Six named metrics:
+
+| Metric | What it measures |
+|---|---|
+| `services/sec` | Reconciler tick throughput (services-per-second the reconciler can converge under no-op state) |
+| `µs/req-p50` + `µs/req-p99` | Ingress L7 routing decision latency (p50 / p99 from BuildRouter + LookupL7) |
+| `containers/cycle` | Probe Manager sustained capacity (concurrent containers probed per cycle) |
+| `MB/sec` | L4 proxy throughput (loopback TCP echo through io.Copy splice) |
+| `lines/sec` | SSE encoder per-connection ceiling (fmt.Fprintf + flush) |
+| `MB-rss` | Idle proxa-server RSS — Linux reads `/proc/<pid>/status` VmRSS; macOS uses `runtime.MemStats.Sys` as portable approximation (NOT cross-platform comparable) |
+
+### When to run
+
+- Before opening a PR that touches reconciler / ingress / probe / SSE hot paths
+- As part of release sign-off (capture baseline, compare to previous tag)
+- In CI on a stable runner class (consistent CPU model required for trend tracking)
+
+### Reading regression signals
+
+A 10-20% drift in any metric is usually noise. >50% drift indicates a
+real regression. The bench files use `b.ReportMetric` so output is
+machine-parseable with `go test -bench=. -json ./bench/...` for trend
+dashboards.
+
+### Updating bench/binary-size-baseline.txt
+
+When a feature intentionally grows the binary (e.g., a new internal
+package or a new transitive dep), update the baseline in the SAME
+commit:
+
+```sh
+make build
+stat -f%z bin/proxa > bench/binary-size-baseline.txt   # macOS
+# or
+stat -c%s bin/proxa > bench/binary-size-baseline.txt   # Linux
+```
+
+Then commit the updated baseline. CI's `make build-check` ensures the
+baseline tracks intentional growth rather than silently inflating.
+
+## Future supply-chain work (deferred)
+
+The following are intentionally out-of-scope for v0.4.2 and tracked
+for a future release:
+
+- **Image signing via cosign keyless** — wait for first supply-chain
+  concern from a real user. Workflow integration: add `cosign sign` to
+  `.github/workflows/release.yml` after the docker push step.
+- **SBOM publishing per release** — generate with `syft packages` and
+  attach to the GitHub Release. Useful for enterprise compliance asks.
+- **Docker Hub mirror** — GHCR-only is fine for v0.4.x. Mirror to
+  Docker Hub when broader operator visibility is needed.
+- **Custom CNAME (get.proxa.sh)** for the install.sh URL — operational
+  polish, requires domain registration first.
+
+Each can be added without breaking existing operators; the contract
+of the release pipeline (binaries + checksums + images + manifests)
+stays stable.
