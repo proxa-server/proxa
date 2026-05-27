@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proxa · Events</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/htmx.min.js" defer></script>
+<script src="/static/alpine.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="/ui/">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="2" width="20" height="20" rx="6" fill="#2a9d8f" opacity=".15"/>
+      <path d="M7 8h4a3 3 0 0 1 0 6H7V8z" stroke="#2a9d8f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17 8v8" stroke="#2a9d8f" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="17" cy="8" r="1.5" fill="#2a9d8f"/>
+    </svg>
+    <span class="wordmark">Proxa</span>
+    <span class="badge">Events</span>
+  </a>
+  <div class="cluster-status">
+    <a href="/ui/" style="color:var(--fg-2);text-decoration:none">← Back to dashboard</a>
+  </div>
+</nav>
+
+<div class="container" x-data="eventsController()" x-init="load(); poll()">
+
+  <div class="card" style="padding:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h1 style="margin:0;font-size:18px">📜 Audit Log</h1>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" x-model="filter" placeholder="filter by target (e.g. service:default/api)"
+               @keydown.enter="load()"
+               style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;min-width:280px">
+        <select x-model.number="limit" @change="load()"
+                style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="250">250</option>
+          <option value="1000">1000</option>
+        </select>
+        <button @click="load()" class="chip chip-neutral" style="border:none;cursor:pointer">
+          🔄 Refresh
+        </button>
+      </div>
+    </div>
+
+    <div x-show="loading && !rows.length" style="color:var(--fg-3)">loading…</div>
+    <div x-show="err" x-text="err" style="color:#e63946"></div>
+    <div x-show="!loading && !rows.length && !err" style="color:var(--fg-3);padding:24px 0">
+      no events yet — reconciler emits one whenever it creates, removes, or scales a service.
+    </div>
+
+    <table x-show="rows.length" style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);color:var(--fg-3);text-align:left">
+          <th style="padding:8px 12px 8px 0;width:160px">When</th>
+          <th style="padding:8px 12px 8px 0;width:200px">Type</th>
+          <th style="padding:8px 12px 8px 0;width:160px">Actor</th>
+          <th style="padding:8px 12px 8px 0">Target</th>
+          <th style="padding:8px 0">Payload</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="e in rows" :key="e.id">
+          <tr style="border-bottom:1px solid var(--border)">
+            <td class="mono" style="padding:8px 12px 8px 0;color:var(--fg-3)" x-text="fmtTime(e.at)"></td>
+            <td class="mono" style="padding:8px 12px 8px 0" x-text="e.type"></td>
+            <td class="mono" style="padding:8px 12px 8px 0;color:var(--fg-3)" x-text="e.actor"></td>
+            <td class="mono" style="padding:8px 12px 8px 0" x-text="e.target"></td>
+            <td class="mono" style="padding:8px 0;color:var(--fg-3);max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                x-text="e.payload" :title="e.payload"></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function eventsController() {
+  return {
+    rows: [],
+    loading: false,
+    err: '',
+    filter: '',
+    limit: 50,
+
+    async load() {
+      this.loading = true;
+      this.err = '';
+      const q = new URLSearchParams();
+      if (this.filter) q.set('target', this.filter);
+      q.set('limit', String(this.limit));
+      try {
+        const resp = await fetch('/api/v1/events?' + q.toString(), {
+          headers: {'Accept': 'application/json'},
+          credentials: 'same-origin'
+        });
+        if (!resp.ok) {
+          this.err = 'failed to load events: ' + resp.status + ' ' + resp.statusText;
+          this.rows = [];
+          return;
+        }
+        const data = await resp.json();
+        this.rows = data.events || [];
+      } catch (e) {
+        this.err = 'network error: ' + e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    poll() {
+      setInterval(() => this.load(), 10_000); // 10s — audit log doesn't need to be live
+    },
+
+    fmtTime(iso) {
+      if (!iso) return '';
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString();
+      } catch (e) {
+        return iso;
+      }
+    }
+  };
+}
+</script>
+
+</body>
+</html>
