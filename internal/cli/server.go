@@ -16,6 +16,7 @@ import (
 	"github.com/proxa-server/proxa/internal/auth/token"
 	"github.com/proxa-server/proxa/internal/config"
 	"github.com/proxa-server/proxa/internal/datadir"
+	"github.com/proxa-server/proxa/internal/events"
 	"github.com/proxa-server/proxa/internal/ingress"
 	"github.com/proxa-server/proxa/internal/probe"
 	"github.com/proxa-server/proxa/internal/reconciler"
@@ -89,16 +90,23 @@ func runServer(ctx context.Context, cfg *config.Config) error {
 	// Ingress (L7/L4 routing layer).
 	ingressCtl := ingress.New(cfg.Ingress, cfg.DataDir, logger)
 
+	// Events store (audit log; v0.4.3+). Layered on the same *sql.DB
+	// as the state store — migration v2 already created the events
+	// table during Migrate above.
+	eventStore := events.NewStore(st.DB())
+
 	// Reconciler.
 	recon := reconciler.New(st, rt, reconciler.Options{
 		TickInterval: cfg.TickInterval,
 		Logger:       logger,
 		Probes:       probes,
 		Ingress:      ingressCtl,
+		Events:       eventStore,
 	})
 
 	// Server.
 	srv := server.New(cfg, st, rt, recon, authn, authz)
+	srv.WithEvents(eventStore)
 	srv.WithIngress(ingressCtl)
 	srv.MountRoutes()
 	srv.MountUI()

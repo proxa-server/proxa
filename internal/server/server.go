@@ -16,6 +16,7 @@ import (
 
 	"github.com/proxa-server/proxa/internal/auth"
 	"github.com/proxa-server/proxa/internal/config"
+	"github.com/proxa-server/proxa/internal/events"
 	"github.com/proxa-server/proxa/internal/ingress"
 	"github.com/proxa-server/proxa/internal/reconciler"
 	rt "github.com/proxa-server/proxa/internal/runtime"
@@ -29,6 +30,7 @@ type Server struct {
 	runtime   rt.Runtime
 	recon     *reconciler.Reconciler
 	ingress   ingress.IngressController // optional; UI shows "off" widget when nil
+	events    *events.Store             // optional; v0.4.3+; nil = no events endpoints registered
 	authn     auth.Authenticator
 	authz     auth.PolicyEngine
 	Router    *chi.Mux       // exported so callers can attach more routes
@@ -64,6 +66,11 @@ func New(cfg *config.Config, st store.StateStore, runtime rt.Runtime, recon *rec
 // surface routes and TLS state. Optional — when nil the routes table
 // renders empty and the Ingress header widget shows TLS:off.
 func (s *Server) WithIngress(i ingress.IngressController) { s.ingress = i }
+
+// WithEvents installs an events.Store so the dashboard + API can surface
+// the audit log. Optional — when nil the events API returns 503 and the
+// dashboard Events card renders an empty state.
+func (s *Server) WithEvents(e *events.Store) { s.events = e }
 
 // IsUnixListener reports whether the server is listening on a Unix
 // socket. Used by middleware to decide whether to bypass token auth on
