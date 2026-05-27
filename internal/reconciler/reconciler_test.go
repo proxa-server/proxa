@@ -7,6 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	rt "github.com/proxa-server/proxa/internal/runtime"
@@ -139,37 +140,46 @@ func TestReconcilerCreatesMissingContainers(t *testing.T) {
 }
 
 func TestReconcilerHonorsPoke(t *testing.T) {
-	store := &fakeStore{
-		projects: []types.Project{{Name: "default"}},
-		services: map[string][]types.Service{
-			"default": {{
-				Project: "default",
-				Name:    "web",
-				Spec:    types.TaskDef{Project: "default", Name: "web", Image: "nginx:alpine", Replicas: 1},
-			}},
-		},
-	}
-	runtime := &fakeRuntime{}
+	// Migrated to testing/synctest (Go 1.25): real time.Sleep was 200ms
+	// per run with race-condition risk if the goroutine hadn't scheduled
+	// yet. synctest.Wait() blocks until every goroutine in the bubble is
+	// durably waiting on a channel/timer, which IS the condition the
+	// sleeps were approximating. Wall time drops from ~200ms to <1ms,
+	// and the test is deterministic.
+	synctest.Test(t, func(t *testing.T) {
+		store := &fakeStore{
+			projects: []types.Project{{Name: "default"}},
+			services: map[string][]types.Service{
+				"default": {{
+					Project: "default",
+					Name:    "web",
+					Spec:    types.TaskDef{Project: "default", Name: "web", Image: "nginx:alpine", Replicas: 1},
+				}},
+			},
+		}
+		runtime := &fakeRuntime{}
 
-	// Long tick so only the poke triggers reconciliation in our window.
-	r := New(store, runtime, Options{TickInterval: 5 * time.Second})
+		// Long tick so only the poke triggers reconciliation in our window.
+		r := New(store, runtime, Options{TickInterval: 5 * time.Second})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go r.Run(ctx)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go r.Run(ctx)
 
-	// Wait briefly for first tick (which fires immediately), then poke.
-	time.Sleep(100 * time.Millisecond)
-	if got := runtime.createCount.Load(); got < 1 {
-		t.Errorf("first tick should have created at least 1 container, got %d", got)
-	}
+		// Wait for the first immediate-fire reconcile to complete and the
+		// goroutine to block on the tick/poke select.
+		synctest.Wait()
+		if got := runtime.createCount.Load(); got < 1 {
+			t.Errorf("first tick should have created at least 1 container, got %d", got)
+		}
 
-	r.Poke()
-	time.Sleep(100 * time.Millisecond)
-	cancel()
-	// We don't strictly need to assert a second create here (idempotency
-	// would prevent duplicate creates if container exists), just that the
-	// loop didn't deadlock.
+		r.Poke()
+		synctest.Wait()
+		cancel()
+		// We don't strictly need to assert a second create here (idempotency
+		// would prevent duplicate creates if container exists), just that
+		// the loop didn't deadlock.
+	})
 }
 
 func TestReconcilerContinuesOnError(t *testing.T) {
