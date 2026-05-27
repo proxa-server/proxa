@@ -65,6 +65,7 @@ func (s *Server) MountUI() {
 	s.Router.With(mw).Get("/ui/system", s.handleUISystem)
 	s.Router.With(mw).Get("/ui/events", s.handleUIEvents)
 	s.Router.With(mw).Get("/ui/containers", s.handleUIContainers)
+	s.Router.With(mw).Get("/ui/logs/host/{id}", s.handleUIHostLogs)
 
 	// Static assets — also gated by the same middleware so a TCP listener
 	// without auth doesn't leak the JS/CSS (low-risk but consistent).
