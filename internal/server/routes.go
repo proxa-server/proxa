@@ -30,6 +30,7 @@ func (s *Server) MountRoutes() {
 			r.Post("/{id}/stop", s.handleHostContainerAction("stop"))
 			r.Post("/{id}/restart", s.handleHostContainerAction("restart"))
 			r.Delete("/{id}", s.handleHostContainerRemove)
+			r.Get("/{id}/logs", s.handleHostContainerLogs)
 		})
 	})
 }
