@@ -72,6 +72,13 @@
           <td style="padding:8px 0;color:var(--fg-3)">Host CPU count</td>
           <td class="mono" x-text="info.numcpu_host"></td>
         </tr>
+        <tr>
+          <td style="padding:8px 0;color:var(--fg-3)">Distribution</td>
+          <td class="mono">
+            <span x-text="info.distribution"></span>
+            <span class="chip chip-neutral" style="margin-left:8px" x-text="distributionLabel(info.distribution)"></span>
+          </td>
+        </tr>
       </tbody>
     </table>
 
@@ -106,6 +113,14 @@ function systemInfoController() {
         case 'container_limit': return 'auto-adjusted from container limit';
         case 'env_override': return 'env override';
         default: return s;
+      }
+    },
+    distributionLabel(d) {
+      switch (d) {
+        case 'binary': return 'host binary';
+        case 'docker': return 'container image';
+        case 'unknown': return 'detection failed';
+        default: return d;
       }
     },
     init() {

@@ -15,6 +15,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_002_IngressLBAcrossReplicas covers SC-002: a service with
@@ -25,24 +27,25 @@ import (
 // one bind), and the bridge subnet is unreachable from the host on
 // Docker Desktop. On a Linux server this test runs normally.
 func TestSC_002_IngressLBAcrossReplicas(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-002")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
-	skipIfHTTPProbeUnreachable(t)
+	harness.SkipIfHTTPProbeUnreachable(t)
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
 
-	httpPort, httpsPort := pickTwoFreeTCPPorts(t)
+	httpPort, httpsPort := harness.PickTwoFreeTCPPorts(t)
 	cfgPath := filepath.Join(dir, "config.toml")
 	cfg := fmt.Sprintf("[ingress]\nhttp_port = %d\nhttps_port = %d\ntls = true\nemail = \"\"\n", httpPort, httpsPort)
 	if err := os.WriteFile(cfgPath, []byte(cfg), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
 	tomlPath := filepath.Join(dir, "lb.toml")
@@ -62,7 +65,7 @@ host = "lb.local"
 	if err := os.WriteFile(tomlPath, []byte(tomlContent), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up: %v\n%s", err, out)
 	}
 	t.Cleanup(func() {
@@ -71,8 +74,8 @@ host = "lb.local"
 		}
 	})
 
-	waitForCount(t, "lbsvc", 3, 45*time.Second)
-	if !waitForServiceStatus(t, dir, "lbsvc", "healthy", 30*time.Second) {
+	harness.WaitForCount(t, "lbsvc", 3, 45*time.Second)
+	if !harness.WaitForServiceStatus(t, dir, "lbsvc", "healthy", 30*time.Second) {
 		t.Fatalf("lbsvc never reached healthy")
 	}
 

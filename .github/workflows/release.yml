@@ -1,0 +1,116 @@
+# Release pipeline — triggered by every `v*` git tag push.
+#
+# Builds binaries via Goreleaser (cross-compiled for linux/darwin ×
+# amd64/arm64), builds multi-arch container images via buildx, pushes
+# everything to GHCR + creates a GitHub Release with checksums.
+#
+# Local dry-run (no publish):
+#   make release-dry
+#
+# Production trigger:
+#   git tag v0.4.2 && git push origin v0.4.2
+
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+# Required to publish to GHCR + attach binaries to the GitHub Release.
+# contents: write — needed for `gh release create` / Goreleaser upload
+# packages: write — needed for GHCR push
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    name: build + push images + publish release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Goreleaser needs full git history for changelog generation.
+          fetch-depth: 0
+
+      - name: Set up Go 1.26
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+          cache: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Mirror install.sh to docs/install/
+        # Ensures the GitHub Pages-served install.sh always matches the
+        # repo-root install.sh for the released tag. The actual copy
+        # happens in-place; we don't commit anything from this workflow
+        # (file already lives under docs/install/install.sh in the
+        # tagged commit per `make mirror-install` run by the author
+        # before tagging).
+        run: |
+          make mirror-install
+          if ! diff -q install.sh docs/install/install.sh >/dev/null; then
+            echo "::error::docs/install/install.sh is out of sync with install.sh"
+            echo "Run 'make mirror-install' locally and amend the release commit."
+            exit 1
+          fi
+
+      - name: Run goreleaser
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: go tool goreleaser release --clean
+
+      - name: Verify image labels (proxa)
+        run: |
+          docker manifest inspect "ghcr.io/proxa-server/proxa:${GITHUB_REF_NAME}" \
+            | tee /tmp/proxa-manifest.json
+          # Sanity: manifest lists both architectures.
+          if ! grep -q '"architecture": "amd64"' /tmp/proxa-manifest.json; then
+            echo "::error::proxa image missing amd64 manifest"
+            exit 1
+          fi
+          if ! grep -q '"architecture": "arm64"' /tmp/proxa-manifest.json; then
+            echo "::error::proxa image missing arm64 manifest"
+            exit 1
+          fi
+
+      - name: Verify image labels (proxa-agent)
+        run: |
+          docker manifest inspect "ghcr.io/proxa-server/proxa-agent:${GITHUB_REF_NAME}" \
+            | tee /tmp/proxa-agent-manifest.json
+          if ! grep -q '"architecture": "amd64"' /tmp/proxa-agent-manifest.json; then
+            echo "::error::proxa-agent image missing amd64 manifest"
+            exit 1
+          fi
+          if ! grep -q '"architecture": "arm64"' /tmp/proxa-agent-manifest.json; then
+            echo "::error::proxa-agent image missing arm64 manifest"
+            exit 1
+          fi
+
+      - name: Mark GHCR packages public
+        # Idempotent — re-running on an already-public package returns
+        # 204 + the same state. Required only once per package, but
+        # cheap to keep in the workflow so newly-created packages get
+        # the right visibility automatically.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for pkg in proxa proxa-agent; do
+            gh api \
+              --method PATCH \
+              -H "Accept: application/vnd.github+json" \
+              "/orgs/proxa-server/packages/container/${pkg}" \
+              -f visibility=public \
+              || echo "warn: could not mark ${pkg} public (may require an admin PAT — see operations.md)"
+          done

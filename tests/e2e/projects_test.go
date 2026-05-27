@@ -10,25 +10,28 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_006_MultiProjectIsolation verifies that two services with the
 // same name in different projects coexist as independent containers.
 func TestSC_006_MultiProjectIsolation(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-006")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
 	for _, p := range []string{"socio-do", "kut-do"} {
 		// Project must exist before upserting a service in it (see handlers.go).
-		if out, err := runProxa(t, dir, "ps"); err != nil {
+		if out, err := harness.RunProxa(t, dir, "ps"); err != nil {
 			t.Fatalf("ps before project create: %v\n%s", err, out)
 		}
 		// Create project via API to avoid needing a `proxa project` cmd in v0.0.
@@ -39,7 +42,7 @@ func TestSC_006_MultiProjectIsolation(t *testing.T) {
 		if err := os.WriteFile(tomlPath, []byte(toml), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+		if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 			t.Fatalf("up %s: %v\n%s", p, err, out)
 		}
 	}
@@ -80,7 +83,7 @@ func createProjectViaCurl(t *testing.T, dir, name string) {
 		t.Fatalf("read token: %v", err)
 	}
 	token := strings.TrimSpace(string(tokenBytes))
-	sock := socketPath(t, dir)
+	sock := harness.SocketPath(t, dir)
 
 	cmd := exec.Command("curl", "-sS", "--unix-socket", sock,
 		"-H", "Authorization: Bearer "+token,

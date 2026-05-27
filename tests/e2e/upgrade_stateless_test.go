@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_002_5_StatelessUpgrade_NoFailedStatus verifies the start-first
@@ -22,16 +24,17 @@ import (
 // this test we use host=0 (ingress-only port semantics from v0.1.0) and
 // poll the service status via `proxa ps -j` to verify no failed window.
 func TestSC_002_5_StatelessUpgrade_NoFailedStatus(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-002.5")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
-	skipIfHTTPProbeUnreachable(t)
+	harness.SkipIfHTTPProbeUnreachable(t)
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
 	tomlPath := filepath.Join(dir, "upgrade.toml")
@@ -57,14 +60,14 @@ strategy = "start-first"
 	if err := os.WriteFile(tomlPath, []byte(tomlV1), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up v1: %v\n%s", err, out)
 	}
 	t.Cleanup(func() {
 		_ = exec.Command("docker", "rm", "-f", "proxa-default-upgrade-0").Run()
 	})
-	waitForCount(t, "upgrade", 1, 30*time.Second)
-	if !waitForServiceStatus(t, dir, "upgrade", "healthy", 30*time.Second) {
+	harness.WaitForCount(t, "upgrade", 1, 30*time.Second)
+	if !harness.WaitForServiceStatus(t, dir, "upgrade", "healthy", 30*time.Second) {
 		t.Fatalf("upgrade service never reached healthy on v1")
 	}
 
@@ -81,7 +84,7 @@ strategy = "start-first"
 			case <-stopSampler:
 				return
 			case <-ticker.C:
-				out, err := runProxa(t, dir, "ps", "-j")
+				out, err := harness.RunProxa(t, dir, "ps", "-j")
 				if err != nil {
 					continue
 				}
@@ -119,7 +122,7 @@ strategy = "start-first"
 	if err := os.WriteFile(tomlPath, []byte(tomlV2), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up v2: %v\n%s", err, out)
 	}
 

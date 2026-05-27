@@ -16,6 +16,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_001_IngressHTTPSAndDashboard covers SC-001 in self-signed
@@ -29,6 +31,7 @@ import (
 // alongside the feature (per user instruction: "we'd be destroying
 // with one hand what we build with the other" if dashboard lagged).
 func TestSC_001_IngressHTTPSAndDashboard(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-001")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
@@ -38,13 +41,13 @@ func TestSC_001_IngressHTTPSAndDashboard(t *testing.T) {
 	// Docker Desktop without VM-side routability.
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
 
 	// Pick unused TCP ports for the ingress + backend so the test is hermetic.
-	httpPort, httpsPort := pickTwoFreeTCPPorts(t)
-	backendHostPort, _ := pickTwoFreeTCPPorts(t) // need only one
+	httpPort, httpsPort := harness.PickTwoFreeTCPPorts(t)
+	backendHostPort, _ := harness.PickTwoFreeTCPPorts(t) // need only one
 	cfgPath := filepath.Join(dir, "config.toml")
 	cfg := fmt.Sprintf(`
 [ingress]
@@ -57,7 +60,7 @@ email      = ""
 		t.Fatal(err)
 	}
 
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
 	tomlPath := filepath.Join(dir, "whoami.toml")
@@ -77,15 +80,15 @@ host = "whoami.local"
 	if err := os.WriteFile(tomlPath, []byte(tomlContent), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up: %v\n%s", err, out)
 	}
 	t.Cleanup(func() {
 		_ = exec.Command("docker", "rm", "-f", "proxa-default-whoami-0").Run()
 	})
 
-	waitForCount(t, "whoami", 1, 30*time.Second)
-	if !waitForServiceStatus(t, dir, "whoami", "healthy", 30*time.Second) {
+	harness.WaitForCount(t, "whoami", 1, 30*time.Second)
+	if !harness.WaitForServiceStatus(t, dir, "whoami", "healthy", 30*time.Second) {
 		t.Fatalf("whoami service never reached healthy")
 	}
 
@@ -126,13 +129,13 @@ httpsOK:
 
 	// --- Part 2: dashboard JSON shows the new route ---
 
-	out, err := runProxa(t, dir, "ps", "-j")
+	out, err := harness.RunProxa(t, dir, "ps", "-j")
 	if err != nil {
 		t.Fatalf("ps -j: %v\n%s", err, out)
 	}
 	// /api/v1/routes via curl since proxa ps doesn't include routes (yet).
-	apiOut, err := exec.Command("curl", "-sS", "--unix-socket", socketPath(t, dir),
-		"-H", "Authorization: Bearer "+readToken(t, dir),
+	apiOut, err := exec.Command("curl", "-sS", "--unix-socket", harness.SocketPath(t, dir),
+		"-H", "Authorization: Bearer "+harness.ReadToken(t, dir),
 		"http://x/api/v1/routes").Output()
 	if err != nil {
 		t.Fatalf("GET /api/v1/routes: %v", err)
@@ -170,8 +173,8 @@ httpsOK:
 
 	// --- Part 3: /ui/routes HTML fragment contains the new route ---
 
-	uiOut, err := exec.Command("curl", "-sS", "--unix-socket", socketPath(t, dir),
-		"-H", "Authorization: Bearer "+readToken(t, dir),
+	uiOut, err := exec.Command("curl", "-sS", "--unix-socket", harness.SocketPath(t, dir),
+		"-H", "Authorization: Bearer "+harness.ReadToken(t, dir),
 		"http://x/ui/routes").Output()
 	if err != nil {
 		t.Fatalf("GET /ui/routes: %v", err)
@@ -179,33 +182,7 @@ httpsOK:
 	body := string(uiOut)
 	for _, want := range []string{"whoami.local", "whoami", "chip-blue", "valid"} {
 		if !strings.Contains(body, want) {
-			t.Errorf("/ui/routes HTML missing %q\n--- snippet ---\n%s", want, snippet(body, 600))
+			t.Errorf("/ui/routes HTML missing %q\n--- snippet ---\n%s", want, harness.Snippet(body, 600))
 		}
 	}
-}
-
-func readToken(t *testing.T, dir string) string {
-	t.Helper()
-	b, err := os.ReadFile(filepath.Join(dir, "token"))
-	if err != nil {
-		t.Fatalf("read token: %v", err)
-	}
-	return strings.TrimSpace(string(b))
-}
-
-// pickTwoFreeTCPPorts returns two distinct ports that are free at the
-// moment of the call. Race-y in principle (some other process can grab
-// them between the test's port discovery and the server's bind) but
-// fine for local CI.
-func pickTwoFreeTCPPorts(t *testing.T) (int, int) {
-	t.Helper()
-	pick := func() int {
-		l, err := net.Listen("tcp", "127.0.0.1:0")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer l.Close()
-		return l.Addr().(*net.TCPAddr).Port
-	}
-	return pick(), pick()
 }

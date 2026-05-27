@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_005_SystemInfo covers SC-005 / FR-007 / FR-008: every surface
@@ -17,17 +19,18 @@ import (
 //
 // Six checks per contracts/system-info-api.md "Test coverage" section.
 func TestSC_005_SystemInfo(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-005")
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
-	token := readToken(t, dir)
+	token := harness.ReadToken(t, dir)
 
 	// (1) GET /api/v1/system returns 200 with all expected keys.
-	body := getViaSocket(t, dir, token, "/api/v1/system")
+	body := harness.GetViaSocket(t, dir, token, "/api/v1/system")
 	var payload map[string]any
 	if err := json.Unmarshal([]byte(body), &payload); err != nil {
 		t.Fatalf("decode /api/v1/system: %v\nbody=%s", err, body)
@@ -56,7 +59,7 @@ func TestSC_005_SystemInfo(t *testing.T) {
 	}
 
 	// (2) `proxa system info` plain-text matches keys from the HTTP body.
-	cliOut, err := runProxa(t, dir, "system", "info")
+	cliOut, err := harness.RunProxa(t, dir, "system", "info")
 	if err != nil {
 		t.Fatalf("system info: %v\n%s", err, cliOut)
 	}
@@ -68,7 +71,7 @@ func TestSC_005_SystemInfo(t *testing.T) {
 
 	// (3) `proxa system info --json` matches the HTTP body byte-for-byte
 	// (modulo trailing newline from json.Encoder).
-	cliJSON, err := runProxa(t, dir, "system", "info", "--json")
+	cliJSON, err := harness.RunProxa(t, dir, "system", "info", "--json")
 	if err != nil {
 		t.Fatalf("system info --json: %v\n%s", err, cliJSON)
 	}
@@ -96,7 +99,7 @@ func TestSC_005_SystemInfo(t *testing.T) {
 	}
 
 	// (5) Dashboard footer card markup is present on /ui/.
-	uiBody := getViaSocket(t, dir, token, "/ui/")
+	uiBody := harness.GetViaSocket(t, dir, token, "/ui/")
 	for _, want := range []string{
 		"⚙️ System",
 		"/ui/system",
@@ -109,7 +112,7 @@ func TestSC_005_SystemInfo(t *testing.T) {
 	}
 
 	// (6) /ui/system page contains all SystemInfo field labels.
-	sysPage := getViaSocket(t, dir, token, "/ui/system")
+	sysPage := harness.GetViaSocket(t, dir, token, "/ui/system")
 	for _, want := range []string{
 		"System Info",
 		"Proxa version",
@@ -129,7 +132,7 @@ func TestSC_005_SystemInfo(t *testing.T) {
 // so the test can assert the 401 path.
 func getViaSocketNoToken(t *testing.T, dir, path string) string {
 	t.Helper()
-	out, err := exec.Command("curl", "-sS", "--unix-socket", socketPath(t, dir),
+	out, err := exec.Command("curl", "-sS", "--unix-socket", harness.SocketPath(t, dir),
 		"-w", "\nHTTP %{http_code}\n",
 		"http://x"+path).Output()
 	if err != nil {

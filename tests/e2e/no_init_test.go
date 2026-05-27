@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_007a_NoInitGivesClearError verifies that running `proxa up`
@@ -21,7 +23,7 @@ func TestSC_007a_NoInitGivesClearError(t *testing.T) {
 	if err := os.WriteFile(tomlPath, []byte("name = \"x\"\nimage = \"traefik/whoami:latest\"\nreplicas = 1\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	out, err := runProxa(t, dir, "up", tomlPath)
+	out, err := harness.RunProxa(t, dir, "up", tomlPath)
 	if err == nil {
 		t.Fatalf("expected non-zero exit; got success.\nout: %s", out)
 	}
@@ -35,7 +37,7 @@ func TestSC_007a_NoInitGivesClearError(t *testing.T) {
 // error.
 func TestSC_007b_NoDaemonGivesClearError(t *testing.T) {
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
 
@@ -43,7 +45,7 @@ func TestSC_007b_NoDaemonGivesClearError(t *testing.T) {
 	if err := os.WriteFile(tomlPath, []byte("name = \"x\"\nimage = \"traefik/whoami:latest\"\nreplicas = 1\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	out, err := runProxa(t, dir, "up", tomlPath)
+	out, err := harness.RunProxa(t, dir, "up", tomlPath)
 	if err == nil {
 		t.Fatalf("expected non-zero exit (server not running); got success.\nout: %s", out)
 	}

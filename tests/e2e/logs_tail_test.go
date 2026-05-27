@@ -11,24 +11,27 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_001_LogsTail covers SC-001: deploy a service, generate log
 // lines, run `proxa logs <svc> --tail N` and assert ≤ N lines on
 // stdout with exit 0.
 func TestSC_001_LogsTail(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-001")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
-	hostPort, _ := pickTwoFreeTCPPorts(t)
+	hostPort, _ := harness.PickTwoFreeTCPPorts(t)
 	tomlPath := filepath.Join(dir, "logtail.toml")
 	tomlContent := fmt.Sprintf(`
 name     = "logtail"
@@ -43,14 +46,14 @@ protocol  = "http"
 	if err := os.WriteFile(tomlPath, []byte(tomlContent), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up: %v\n%s", err, out)
 	}
 	t.Cleanup(func() {
 		_ = exec.Command("docker", "rm", "-f", "proxa-default-logtail-0").Run()
 	})
 
-	waitForCount(t, "logtail", 1, 30*time.Second)
+	harness.WaitForCount(t, "logtail", 1, 30*time.Second)
 
 	// Generate ~10 log lines by curling whoami.
 	for i := 0; i < 10; i++ {
@@ -58,7 +61,7 @@ protocol  = "http"
 	}
 	time.Sleep(1 * time.Second) // let logs flush
 
-	out, err := runProxa(t, dir, "logs", "logtail", "--tail", "5")
+	out, err := harness.RunProxa(t, dir, "logs", "logtail", "--tail", "5")
 	if err != nil {
 		t.Fatalf("logs --tail 5: %v\n%s", err, out)
 	}
@@ -71,7 +74,7 @@ protocol  = "http"
 	}
 
 	// Unknown service → non-zero exit + clear error.
-	out, err = runProxa(t, dir, "logs", "nosuch")
+	out, err = harness.RunProxa(t, dir, "logs", "nosuch")
 	if err == nil {
 		t.Errorf("expected non-zero exit for missing service; got success\nout=%s", out)
 	}

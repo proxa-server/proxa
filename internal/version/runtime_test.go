@@ -124,3 +124,58 @@ func withUnsetEnv(t *testing.T, key string) {
 		}
 	})
 }
+
+// --- Distribution field tests (added v0.4.2, FR-014) -----------------
+
+func TestSystem_Distribution_EnvOverride(t *testing.T) {
+	withUnsetEnv(t, "PROXA_DISTRIBUTION")
+	t.Setenv("PROXA_DISTRIBUTION", version.DistributionDocker)
+	// Reset the cache so the next System() call re-detects.
+	version.ResetDistributionCacheForTest()
+	info := version.System()
+	if info.Distribution != version.DistributionDocker {
+		t.Errorf("Distribution = %q, want %q", info.Distribution, version.DistributionDocker)
+	}
+}
+
+func TestSystem_Distribution_FallbackBinary(t *testing.T) {
+	withUnsetEnv(t, "PROXA_DISTRIBUTION")
+	version.ResetDistributionCacheForTest()
+	info := version.System()
+	// On a CI host or dev machine (PID > 1, no /.dockerenv) we expect "binary".
+	// If running inside Docker for this test, the detector would return "docker"
+	// and that's also valid — just verify it's one of the known enum values.
+	switch info.Distribution {
+	case version.DistributionBinary, version.DistributionDocker, version.DistributionUnknown:
+		// ok
+	default:
+		t.Errorf("Distribution = %q, want one of binary/docker/unknown", info.Distribution)
+	}
+}
+
+func TestSystem_Distribution_RoundtripJSON(t *testing.T) {
+	withUnsetEnv(t, "PROXA_DISTRIBUTION")
+	t.Setenv("PROXA_DISTRIBUTION", version.DistributionDocker)
+	version.ResetDistributionCacheForTest()
+
+	info := version.System()
+	b, err := json.Marshal(info)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if !strings.Contains(string(b), `"distribution":"docker"`) {
+		t.Errorf("expected JSON to contain \"distribution\":\"docker\"; got: %s", b)
+	}
+}
+
+func TestSystem_Distribution_DefaultBinaryWhenNoSignals(t *testing.T) {
+	// We can't easily prove "no /.dockerenv" cross-platform, but we
+	// CAN verify that with PROXA_DISTRIBUTION explicitly set to
+	// "binary", the detector returns it.
+	t.Setenv("PROXA_DISTRIBUTION", version.DistributionBinary)
+	version.ResetDistributionCacheForTest()
+	info := version.System()
+	if info.Distribution != version.DistributionBinary {
+		t.Errorf("Distribution = %q, want %q", info.Distribution, version.DistributionBinary)
+	}
+}

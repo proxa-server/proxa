@@ -26,6 +26,7 @@ type SystemInfo struct {
 	GOMAXPROCS       int      `json:"gomaxprocs"`
 	GOMAXPROCSSource string   `json:"gomaxprocs_source"`
 	NumCPUHost       int      `json:"numcpu_host"`
+	Distribution     string   `json:"distribution"`
 }
 
 // GOMAXPROCS source constants. Stable enum — values are part of the
@@ -35,6 +36,19 @@ const (
 	GOMAXPROCSSourceContainerLimit = "container_limit"
 	GOMAXPROCSSourceEnvOverride    = "env_override"
 )
+
+// Distribution channel constants. Stable enum — values are part of the
+// public API contract. Added in v0.4.2 (006-test-foundation-public-images).
+const (
+	DistributionBinary  = "binary"  // host process (default fallback)
+	DistributionDocker  = "docker"  // running inside a container
+	DistributionUnknown = "unknown" // detection failed (rare)
+)
+
+// distributionCache holds the once-detected channel for the process
+// lifetime. Detected lazily on first call to System() and never
+// re-computed — Distribution can't change without restarting proxa.
+var distributionCache string
 
 // System returns a freshly-computed SystemInfo snapshot of the running
 // process.
@@ -68,7 +82,39 @@ func System() SystemInfo {
 		GOMAXPROCS:       gomaxprocs,
 		GOMAXPROCSSource: source,
 		NumCPUHost:       numcpu,
+		Distribution:     distribution(),
 	}
+}
+
+// distribution detects how the running Proxa process was distributed.
+// Cached on first call (the answer can't change without process
+// restart). Detection priority (per
+// specs/006-test-foundation-public-images/data-model.md):
+//
+//  1. PROXA_DISTRIBUTION env var (set by Dockerfile ENV) — authoritative
+//  2. /.dockerenv file present OR PID == 1 — heuristic for "running in container"
+//  3. fallback "binary"
+//
+// Returns one of DistributionBinary / DistributionDocker / DistributionUnknown.
+func distribution() string {
+	if distributionCache != "" {
+		return distributionCache
+	}
+	if v := os.Getenv("PROXA_DISTRIBUTION"); v != "" {
+		distributionCache = v
+		return distributionCache
+	}
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		distributionCache = DistributionDocker
+		return distributionCache
+	}
+	if os.Getpid() == 1 {
+		// PID 1 strongly suggests container init (or PID-1 systemd, rare).
+		distributionCache = DistributionDocker
+		return distributionCache
+	}
+	distributionCache = DistributionBinary
+	return distributionCache
 }
 
 // goExperiments returns the active GOEXPERIMENT flags as a slice.

@@ -11,6 +11,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_002_6_StatefulStopFirst_NoConcurrentWriters verifies that a
@@ -19,15 +21,16 @@ import (
 // fast-boot) as a stand-in for any stateful workload — postgres would
 // take minutes to converge and exceed test budgets.
 func TestSC_002_6_StatefulStopFirst_NoConcurrentWriters(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-002.6")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
 	tomlPath := filepath.Join(dir, "redis.toml")
@@ -47,14 +50,14 @@ retries  = 3
 	if err := os.WriteFile(tomlPath, []byte(tomlV1), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up v1: %v\n%s", err, out)
 	}
 	t.Cleanup(func() {
 		_ = exec.Command("docker", "rm", "-f", "proxa-default-redis-0").Run()
 	})
 
-	waitForCount(t, "redis", 1, 30*time.Second)
+	harness.WaitForCount(t, "redis", 1, 30*time.Second)
 
 	// Sampler: every 200ms count "Up" containers matching the replica-0 name.
 	var maxConcurrent int
@@ -110,7 +113,7 @@ retries  = 3
 	if err := os.WriteFile(tomlPath, []byte(tomlV2), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up v2: %v\n%s", err, out)
 	}
 

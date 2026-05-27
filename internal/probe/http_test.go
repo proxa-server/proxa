@@ -65,6 +65,13 @@ func TestHTTPProbeUnhealthyStatus(t *testing.T) {
 }
 
 func TestHTTPProbeTimeout(t *testing.T) {
+	// NOTE: this time.Sleep stays as REAL wall time (not migrated to
+	// testing/synctest) — it lives inside an httptest.Server handler
+	// goroutine, which runs OUTSIDE the synctest bubble per Go 1.25
+	// docs. The 500ms cost is acceptable; the test verifies the
+	// probe's http.Client timeout (100ms) fires when the server is
+	// slow. See specs/006-test-foundation-public-images/research.md
+	// R-004 for the full migration-scope decision.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(500 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
@@ -83,6 +90,9 @@ func TestHTTPProbeTimeout(t *testing.T) {
 }
 
 func TestHTTPProbeCtxCancel(t *testing.T) {
+	// NOTE: same rationale as TestHTTPProbeTimeout — the time.Sleep is
+	// inside the httptest.Server handler, outside any synctest bubble.
+	// 2s is the upper bound; the test exits early via ctx cancel.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(2 * time.Second)
 	}))
