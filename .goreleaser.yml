@@ -1,11 +1,12 @@
 # GoReleaser config for Proxa.
 #
-# This file is scaffolded. The release workflow that triggers it (on a
-# git tag push) lands in a later feature; for now the config is a
-# reference for the multi-arch build matrix.
+# Triggered by .github/workflows/release.yml on every `v*` git tag push.
+# Builds + archives + signs binaries, then builds multi-arch container
+# images and pushes them to GHCR.
 #
-# Local dry run:
-#   goreleaser release --snapshot --skip=publish --clean
+# Local dry run (no publish to GitHub or GHCR; outputs land in dist/):
+#   make release-dry
+# (equivalent to: go tool goreleaser release --snapshot --skip=publish --clean)
 
 version: 2
 
@@ -74,3 +75,121 @@ changelog:
       - "^docs:"
       - "^test:"
       - "^chore:"
+
+# ----- Container images (v0.4.2+) -----------------------------------------
+#
+# Multi-arch images for both binaries. One Goreleaser `dockers` entry per
+# (binary × architecture) — 4 total. They build single-arch images that
+# `docker_manifests` then stitches into multi-arch manifests.
+#
+# OCI image labels (org.opencontainers.image.*) are applied via
+# --label flags here, NOT in the Dockerfiles, so the Dockerfiles stay
+# minimal and the same release-time metadata covers both binaries.
+
+dockers:
+  # --- proxa control plane ---
+  - id: proxa-amd64
+    ids: [proxa]
+    image_templates:
+      - "ghcr.io/proxa-server/proxa:{{ .Version }}-amd64"
+    dockerfile: Dockerfile.proxa
+    use: buildx
+    goarch: amd64
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.source=https://github.com/proxa-server/proxa"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.licenses=Apache-2.0"
+      - "--label=org.opencontainers.image.title=proxa"
+      - "--label=org.opencontainers.image.description=Self-hosted container orchestrator (Nomad/Kamal alternative for homelabs)"
+      - "--label=org.opencontainers.image.url=https://github.com/proxa-server/proxa"
+
+  - id: proxa-arm64
+    ids: [proxa]
+    image_templates:
+      - "ghcr.io/proxa-server/proxa:{{ .Version }}-arm64"
+    dockerfile: Dockerfile.proxa
+    use: buildx
+    goarch: arm64
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.source=https://github.com/proxa-server/proxa"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.licenses=Apache-2.0"
+      - "--label=org.opencontainers.image.title=proxa"
+      - "--label=org.opencontainers.image.description=Self-hosted container orchestrator (Nomad/Kamal alternative for homelabs)"
+      - "--label=org.opencontainers.image.url=https://github.com/proxa-server/proxa"
+
+  # --- proxa-agent (stub binary in v0.4.2; real impl in v0.5) ---
+  - id: proxa-agent-amd64
+    ids: [proxa-agent]
+    image_templates:
+      - "ghcr.io/proxa-server/proxa-agent:{{ .Version }}-amd64"
+    dockerfile: Dockerfile.proxa-agent
+    use: buildx
+    goarch: amd64
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.source=https://github.com/proxa-server/proxa"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.licenses=Apache-2.0"
+      - "--label=org.opencontainers.image.title=proxa-agent"
+      - "--label=org.opencontainers.image.description=Proxa worker-node agent (real impl lands in v0.5; v0.4.2 ships the stub)"
+      - "--label=org.opencontainers.image.url=https://github.com/proxa-server/proxa"
+
+  - id: proxa-agent-arm64
+    ids: [proxa-agent]
+    image_templates:
+      - "ghcr.io/proxa-server/proxa-agent:{{ .Version }}-arm64"
+    dockerfile: Dockerfile.proxa-agent
+    use: buildx
+    goarch: arm64
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.source=https://github.com/proxa-server/proxa"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.licenses=Apache-2.0"
+      - "--label=org.opencontainers.image.title=proxa-agent"
+      - "--label=org.opencontainers.image.description=Proxa worker-node agent (real impl lands in v0.5; v0.4.2 ships the stub)"
+      - "--label=org.opencontainers.image.url=https://github.com/proxa-server/proxa"
+
+# Multi-arch manifests — one set per binary, three aliases each:
+#   - {Version}              e.g. v0.4.2  (exact tag)
+#   - v{Major}.{Minor}       e.g. v0.4    (minor stream)
+#   - latest                                (auto-updated)
+docker_manifests:
+  # --- proxa ---
+  - name_template: "ghcr.io/proxa-server/proxa:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/proxa-server/proxa:{{ .Version }}-amd64"
+      - "ghcr.io/proxa-server/proxa:{{ .Version }}-arm64"
+
+  - name_template: "ghcr.io/proxa-server/proxa:v{{ .Major }}.{{ .Minor }}"
+    image_templates:
+      - "ghcr.io/proxa-server/proxa:{{ .Version }}-amd64"
+      - "ghcr.io/proxa-server/proxa:{{ .Version }}-arm64"
+
+  - name_template: "ghcr.io/proxa-server/proxa:latest"
+    image_templates:
+      - "ghcr.io/proxa-server/proxa:{{ .Version }}-amd64"
+      - "ghcr.io/proxa-server/proxa:{{ .Version }}-arm64"
+
+  # --- proxa-agent ---
+  - name_template: "ghcr.io/proxa-server/proxa-agent:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/proxa-server/proxa-agent:{{ .Version }}-amd64"
+      - "ghcr.io/proxa-server/proxa-agent:{{ .Version }}-arm64"
+
+  - name_template: "ghcr.io/proxa-server/proxa-agent:v{{ .Major }}.{{ .Minor }}"
+    image_templates:
+      - "ghcr.io/proxa-server/proxa-agent:{{ .Version }}-amd64"
+      - "ghcr.io/proxa-server/proxa-agent:{{ .Version }}-arm64"
+
+  - name_template: "ghcr.io/proxa-server/proxa-agent:latest"
+    image_templates:
+      - "ghcr.io/proxa-server/proxa-agent:{{ .Version }}-amd64"
+      - "ghcr.io/proxa-server/proxa-agent:{{ .Version }}-arm64"
