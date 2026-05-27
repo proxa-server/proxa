@@ -23,5 +23,6 @@ func (s *Server) MountRoutes() {
 		})
 		r.Get("/routes", s.handleListRoutes)
 		r.Get("/ingress", s.handleGetIngress)
+		r.Get("/events", s.handleListEvents)
 	})
 }
