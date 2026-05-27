@@ -76,6 +76,8 @@
               </template>
               <template x-if="!c.managed">
                 <div style="display:flex;gap:4px">
+                  <a :href="'/ui/logs/host/' + c.id"
+                     class="chip chip-neutral" style="text-decoration:none;font-size:11px">Logs</a>
                   <button @click="doAction(c.id, 'start')" :disabled="c.state==='running'"
                           class="chip chip-neutral" style="border:none;cursor:pointer;font-size:11px"
                           :style="c.state==='running' ? 'opacity:.4;cursor:not-allowed' : ''">Start</button>
