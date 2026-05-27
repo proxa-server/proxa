@@ -41,9 +41,12 @@ func runUp(ctx interface{ Done() <-chan struct{} }, cfg *config.Config, path str
 	}
 	defer f.Close()
 
-	td, err := parsertoml.Parse(f)
+	res, err := parsertoml.Parse(f)
 	if err != nil {
 		return fmt.Errorf("invalid TOML: %w", err)
+	}
+	for _, w := range res.Warnings {
+		fmt.Fprintln(os.Stderr, "warning:", w)
 	}
 
 	client, err := NewClient(cfg.ListenAddr, cfg.DataDir)
@@ -52,7 +55,7 @@ func runUp(ctx interface{ Done() <-chan struct{} }, cfg *config.Config, path str
 	}
 
 	upCtx := ctxAdapter{ctx}
-	svc, err := client.UpsertService(upCtx, td)
+	svc, err := client.UpsertService(upCtx, res.TaskDef)
 	if err != nil {
 		return err
 	}
