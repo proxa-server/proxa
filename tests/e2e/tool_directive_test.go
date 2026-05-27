@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_006_ToolDirectiveReproducibility covers SC-006 / FR-012: a
@@ -20,6 +22,7 @@ import (
 //
 // Skipped when `go` is not on PATH (developer-machine dependency).
 func TestSC_006_ToolDirectiveReproducibility(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-006")
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skip("go toolchain not on PATH")
 	}

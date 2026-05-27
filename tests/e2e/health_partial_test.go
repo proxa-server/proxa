@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_002_4_PartialDegradeAndRecovery covers a 3-replica service
@@ -16,16 +18,17 @@ import (
 // (SC-002-4 + SC-003), then back to "healthy" once the reconciler
 // rotates the bad replica.
 func TestSC_002_4_PartialDegradeAndRecovery(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-002.4")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
-	skipIfHTTPProbeUnreachable(t)
+	harness.SkipIfHTTPProbeUnreachable(t)
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
 	tomlPath := filepath.Join(dir, "partial.toml")
@@ -49,7 +52,7 @@ retries  = 2
 	if err := os.WriteFile(tomlPath, []byte(tomlContent), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up: %v\n%s", err, out)
 	}
 	t.Cleanup(func() {
@@ -58,9 +61,9 @@ retries  = 2
 		}
 	})
 
-	waitForCount(t, "partial", 3, 30*time.Second)
-	if !waitForServiceStatus(t, dir, "partial", "healthy", 30*time.Second) {
-		out, _ := runProxa(t, dir, "ps", "-j")
+	harness.WaitForCount(t, "partial", 3, 30*time.Second)
+	if !harness.WaitForServiceStatus(t, dir, "partial", "healthy", 30*time.Second) {
+		out, _ := harness.RunProxa(t, dir, "ps", "-j")
 		t.Fatalf("partial never reached healthy initially; last ps:\n%s", out)
 	}
 
@@ -69,14 +72,14 @@ retries  = 2
 		t.Fatalf("docker exec kill -STOP: %v\n%s", err, out)
 	}
 
-	if !waitForServiceStatus(t, dir, "partial", "degraded", 20*time.Second) {
-		out, _ := runProxa(t, dir, "ps", "-j")
+	if !harness.WaitForServiceStatus(t, dir, "partial", "degraded", 20*time.Second) {
+		out, _ := harness.RunProxa(t, dir, "ps", "-j")
 		t.Fatalf("partial never reached degraded after freezing replica 1; last ps:\n%s", out)
 	}
 
 	// Reconciler should rotate the bad replica and recover.
-	if !waitForServiceStatus(t, dir, "partial", "healthy", 45*time.Second) {
-		out, _ := runProxa(t, dir, "ps", "-j")
+	if !harness.WaitForServiceStatus(t, dir, "partial", "healthy", 45*time.Second) {
+		out, _ := harness.RunProxa(t, dir, "ps", "-j")
 		t.Fatalf("partial never recovered to healthy after rotation; last ps:\n%s", out)
 	}
 }

@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_004_LogsSinceFilter covers US4 / SC-004-adjacent: --since DUR
@@ -18,18 +20,19 @@ import (
 // (logs each request), trigger one request, sleep 5s, trigger another,
 // then `proxa logs <svc> --since 3s` should return only the second.
 func TestSC_004_LogsSinceFilter(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-004")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
-	hostPort, _ := pickTwoFreeTCPPorts(t)
+	hostPort, _ := harness.PickTwoFreeTCPPorts(t)
 	tomlPath := filepath.Join(dir, "logsince.toml")
 	tomlContent := fmt.Sprintf(`
 name     = "logsince"
@@ -47,13 +50,13 @@ protocol  = "http"
 	if err := os.WriteFile(tomlPath, []byte(tomlContent), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up: %v\n%s", err, out)
 	}
 	t.Cleanup(func() {
 		_ = exec.Command("docker", "rm", "-f", "proxa-default-logsince-0").Run()
 	})
-	waitForCount(t, "logsince", 1, 30*time.Second)
+	harness.WaitForCount(t, "logsince", 1, 30*time.Second)
 
 	// First request — tagged so we can grep for it.
 	if err := exec.Command("curl", "-sf", "-A", "first-request",
@@ -71,7 +74,7 @@ protocol  = "http"
 	}
 	time.Sleep(1 * time.Second) // let nginx flush
 
-	out, err := runProxa(t, dir, "logs", "logsince", "--since", "3s")
+	out, err := harness.RunProxa(t, dir, "logs", "logsince", "--since", "3s")
 	if err != nil {
 		t.Fatalf("logs --since 3s: %v\n%s", err, out)
 	}

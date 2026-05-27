@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_005_LogsReplicaPick covers US5 / SC-005: --replica N streams
@@ -20,16 +22,17 @@ import (
 // shared host port can't all bind. On a Linux server with bridge-
 // routable hosts the test runs normally.
 func TestSC_005_LogsReplicaPick(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-005")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
-	skipIfHTTPProbeUnreachable(t)
+	harness.SkipIfHTTPProbeUnreachable(t)
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
 	tomlPath := filepath.Join(dir, "logreplica.toml")
@@ -50,7 +53,7 @@ protocol  = "http"
 	if err := os.WriteFile(tomlPath, []byte(tomlContent), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up: %v\n%s", err, out)
 	}
 	t.Cleanup(func() {
@@ -58,12 +61,12 @@ protocol  = "http"
 			_ = exec.Command("docker", "rm", "-f", fmt.Sprintf("proxa-default-logreplica-%d", i)).Run()
 		}
 	})
-	waitForCount(t, "logreplica", 3, 45*time.Second)
+	harness.WaitForCount(t, "logreplica", 3, 45*time.Second)
 
 	// Each replica has logged the nginx startup line; --replica 1 should
 	// only return logs from replica 1, evidenced by the meta header on
 	// stderr (=== /proxa-default-logreplica-1 (replica 1) ===).
-	out, err := runProxa(t, dir, "logs", "logreplica", "--replica", "1", "--tail", "20")
+	out, err := harness.RunProxa(t, dir, "logs", "logreplica", "--replica", "1", "--tail", "20")
 	if err != nil {
 		t.Fatalf("logs --replica 1: %v\n%s", err, out)
 	}
@@ -75,7 +78,7 @@ protocol  = "http"
 	}
 
 	// Out-of-range replica → non-zero exit + clear message.
-	out, err = runProxa(t, dir, "logs", "logreplica", "--replica", "99")
+	out, err = harness.RunProxa(t, dir, "logs", "logreplica", "--replica", "99")
 	if err == nil {
 		t.Errorf("expected non-zero exit for --replica 99; got success:\n%s", out)
 	}

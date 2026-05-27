@@ -15,6 +15,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_003_HotReloadNo5xx covers SC-003: while a sustained curl-
@@ -22,25 +24,26 @@ import (
 // with a modified TOML. The atomic.Pointer router swap (FR-009 +
 // R-003) must produce ZERO 5xx responses in the loop.
 func TestSC_003_HotReloadNo5xx(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-003")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
 
-	httpPort, httpsPort := pickTwoFreeTCPPorts(t)
+	httpPort, httpsPort := harness.PickTwoFreeTCPPorts(t)
 	cfg := fmt.Sprintf("[ingress]\nhttp_port = %d\nhttps_port = %d\ntls = true\nemail = \"\"\n", httpPort, httpsPort)
 	if err := os.WriteFile(filepath.Join(dir, "config.toml"), []byte(cfg), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
-	backendHostPort, _ := pickTwoFreeTCPPorts(t)
+	backendHostPort, _ := harness.PickTwoFreeTCPPorts(t)
 	tomlPath := filepath.Join(dir, "reload.toml")
 	tomlV1 := fmt.Sprintf(`
 name     = "reloadsvc"
@@ -58,15 +61,15 @@ host = "reload.local"
 	if err := os.WriteFile(tomlPath, []byte(tomlV1), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up v1: %v\n%s", err, out)
 	}
 	t.Cleanup(func() {
 		_ = exec.Command("docker", "rm", "-f", "proxa-default-reloadsvc-0").Run()
 	})
 
-	waitForCount(t, "reloadsvc", 1, 30*time.Second)
-	if !waitForServiceStatus(t, dir, "reloadsvc", "healthy", 30*time.Second) {
+	harness.WaitForCount(t, "reloadsvc", 1, 30*time.Second)
+	if !harness.WaitForServiceStatus(t, dir, "reloadsvc", "healthy", 30*time.Second) {
 		t.Fatalf("reloadsvc never healthy")
 	}
 
@@ -136,7 +139,7 @@ lb_strategy = "round-robin"
 	if err := os.WriteFile(tomlPath, []byte(tomlV2), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up v2: %v\n%s", err, out)
 	}
 

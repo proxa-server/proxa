@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_001_ProbeViaIngress_TLS covers SC-001 / FR-005 and is the
@@ -27,25 +29,26 @@ import (
 // Independence test for US1: this is the ONLY test required to prove
 // the bug is fixed end-to-end.
 func TestSC_001_ProbeViaIngress_TLS(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-001")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
 
-	httpPort, httpsPort := pickTwoFreeTCPPorts(t)
+	httpPort, httpsPort := harness.PickTwoFreeTCPPorts(t)
 	cfg := fmt.Sprintf("[ingress]\nhttp_port = %d\nhttps_port = %d\ntls = true\nemail = \"\"\n", httpPort, httpsPort)
 	if err := os.WriteFile(filepath.Join(dir, "config.toml"), []byte(cfg), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
-	backendHostPort, _ := pickTwoFreeTCPPorts(t)
+	backendHostPort, _ := harness.PickTwoFreeTCPPorts(t)
 	tomlPath := filepath.Join(dir, "tlsprobe.toml")
 	tomlContent := fmt.Sprintf(`
 name     = "tlsprobe"
@@ -74,19 +77,19 @@ via      = "ingress"
 	if err := os.WriteFile(tomlPath, []byte(tomlContent), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up: %v\n%s", err, out)
 	}
 	t.Cleanup(func() {
 		_ = exec.Command("docker", "rm", "-f", "proxa-default-tlsprobe-0").Run()
 	})
 
-	waitForCount(t, "tlsprobe", 1, 30*time.Second)
+	harness.WaitForCount(t, "tlsprobe", 1, 30*time.Second)
 
 	// The regression assertion: with TLS=true ingress + probe via=ingress,
 	// the service MUST reach healthy without manual intervention.
-	if !waitForServiceStatus(t, dir, "tlsprobe", "healthy", 30*time.Second) {
-		out, _ := runProxa(t, dir, "ps", "-j")
+	if !harness.WaitForServiceStatus(t, dir, "tlsprobe", "healthy", 30*time.Second) {
+		out, _ := harness.RunProxa(t, dir, "ps", "-j")
 		t.Fatalf("0.4.0 demo bug regressed: TLS-enabled service with via=ingress probe never reached healthy.\nlast ps:\n%s", out)
 	}
 }
@@ -99,25 +102,26 @@ via      = "ingress"
 // override actually engages rather than getting silently overridden by
 // the default-fix branch.
 func TestSC_001_ProbeViaIngress_TLS_FollowRedirectsOverride(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-001")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
 
-	httpPort, httpsPort := pickTwoFreeTCPPorts(t)
+	httpPort, httpsPort := harness.PickTwoFreeTCPPorts(t)
 	cfg := fmt.Sprintf("[ingress]\nhttp_port = %d\nhttps_port = %d\ntls = true\nemail = \"\"\n", httpPort, httpsPort)
 	if err := os.WriteFile(filepath.Join(dir, "config.toml"), []byte(cfg), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
-	backendHostPort, _ := pickTwoFreeTCPPorts(t)
+	backendHostPort, _ := harness.PickTwoFreeTCPPorts(t)
 	tomlPath := filepath.Join(dir, "tlsprobeopt.toml")
 	// follow_redirects = false forces the probe to stay on HTTP and
 	// treat the 3xx as non-2xx; service should NOT reach healthy.
@@ -149,14 +153,14 @@ follow_redirects = false
 	if err := os.WriteFile(tomlPath, []byte(tomlContent), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up: %v\n%s", err, out)
 	}
 	t.Cleanup(func() {
 		_ = exec.Command("docker", "rm", "-f", "proxa-default-tlsprobeopt-0").Run()
 	})
 
-	waitForCount(t, "tlsprobeopt", 1, 30*time.Second)
+	harness.WaitForCount(t, "tlsprobeopt", 1, 30*time.Second)
 
 	// With follow_redirects=false explicitly set, the probe stays on
 	// HTTP and the 301 surfaces as unhealthy. We allow the service to
@@ -167,7 +171,7 @@ follow_redirects = false
 	deadline := time.Now().Add(20 * time.Second)
 	sawUnhealthy := false
 	for time.Now().Before(deadline) {
-		out, _ := runProxa(t, dir, "ps", "-j")
+		out, _ := harness.RunProxa(t, dir, "ps", "-j")
 		if !strings.Contains(out, `"status":"healthy"`) {
 			sawUnhealthy = true
 			break
@@ -175,8 +179,7 @@ follow_redirects = false
 		time.Sleep(2 * time.Second)
 	}
 	if !sawUnhealthy {
-		out, _ := runProxa(t, dir, "ps", "-j")
+		out, _ := harness.RunProxa(t, dir, "ps", "-j")
 		t.Errorf("FR-006 override failed to engage: tlsprobeopt stayed healthy despite follow_redirects=false\nlast ps:\n%s", out)
 	}
 }
-

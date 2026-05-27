@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_006_IngressTCPForward covers SC-006: deploy a redis service
@@ -23,24 +25,25 @@ import (
 // 127.0.0.1:<hostPort> (works on macOS Docker Desktop without bridge
 // routability). The L4 route is on a distinct ingress port.
 func TestSC_006_IngressTCPForward(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-006")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
 
-	httpPort, httpsPort := pickTwoFreeTCPPorts(t)
-	ingressTCPPort, backendHostPort := pickTwoFreeTCPPorts(t)
+	httpPort, httpsPort := harness.PickTwoFreeTCPPorts(t)
+	ingressTCPPort, backendHostPort := harness.PickTwoFreeTCPPorts(t)
 	cfgPath := filepath.Join(dir, "config.toml")
 	cfg := fmt.Sprintf("[ingress]\nhttp_port = %d\nhttps_port = %d\ntls = false\n", httpPort, httpsPort)
 	if err := os.WriteFile(cfgPath, []byte(cfg), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
 	tomlPath := filepath.Join(dir, "redis.toml")
@@ -69,15 +72,15 @@ retries  = 3
 	if err := os.WriteFile(tomlPath, []byte(tomlContent), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up: %v\n%s", err, out)
 	}
 	t.Cleanup(func() {
 		_ = exec.Command("docker", "rm", "-f", "proxa-default-redisl4-0").Run()
 	})
 
-	waitForCount(t, "redisl4", 1, 30*time.Second)
-	if !waitForServiceStatus(t, dir, "redisl4", "healthy", 30*time.Second) {
+	harness.WaitForCount(t, "redisl4", 1, 30*time.Second)
+	if !harness.WaitForServiceStatus(t, dir, "redisl4", "healthy", 30*time.Second) {
 		t.Fatalf("redis never reached healthy")
 	}
 

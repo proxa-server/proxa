@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_002_2_FailedProbeRestartCycle verifies the probe-driven
@@ -18,16 +20,17 @@ import (
 // workload inside the container so probes time out, and assert the
 // reconciler replaces the container within interval × retries + grace.
 func TestSC_002_2_FailedProbeRestartCycle(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-002.2")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
-	skipIfHTTPProbeUnreachable(t)
+	harness.SkipIfHTTPProbeUnreachable(t)
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
 	tomlPath := filepath.Join(dir, "restart.toml")
@@ -51,14 +54,14 @@ retries  = 2
 	if err := os.WriteFile(tomlPath, []byte(tomlContent), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up: %v\n%s", err, out)
 	}
 	t.Cleanup(func() {
 		_ = exec.Command("docker", "rm", "-f", "proxa-default-restartsvc-0").Run()
 	})
 
-	waitForCount(t, "restartsvc", 1, 20*time.Second)
+	harness.WaitForCount(t, "restartsvc", 1, 20*time.Second)
 
 	// Grab the initial container ID — we'll watch for it to change.
 	initialID := containerID(t, "proxa-default-restartsvc-0")

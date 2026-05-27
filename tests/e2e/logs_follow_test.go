@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_002_LogsFollowLatency covers SC-002 + SC-003:
@@ -22,18 +24,19 @@ import (
 //     or 130 (no orphaned ESTABLISHED — the http.Request.Context cancel
 //     closes the TCP connection).
 func TestSC_002_LogsFollowLatency(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-002")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
-	hostPort, _ := pickTwoFreeTCPPorts(t)
+	hostPort, _ := harness.PickTwoFreeTCPPorts(t)
 	tomlPath := filepath.Join(dir, "logfollow.toml")
 	// nginx-unprivileged logs every request to stdout — whoami does NOT
 	// by default, so we use nginx for the latency test.
@@ -53,18 +56,18 @@ protocol  = "http"
 	if err := os.WriteFile(tomlPath, []byte(tomlContent), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up: %v\n%s", err, out)
 	}
 	t.Cleanup(func() {
 		_ = exec.Command("docker", "rm", "-f", "proxa-default-logfollow-0").Run()
 	})
-	waitForCount(t, "logfollow", 1, 30*time.Second)
+	harness.WaitForCount(t, "logfollow", 1, 30*time.Second)
 
 	// Start `proxa logs <svc> -f --tail 0` (skip history; only stream
 	// new lines) as a subprocess; lines flow into a channel.
-	cmd := exec.Command(proxaBinary(t), "logs", "logfollow", "-f")
-	cmd.Env = append(os.Environ(), proxaEnv(t, dir)...)
+	cmd := exec.Command(harness.ProxaBinary(t), "logs", "logfollow", "-f")
+	cmd.Env = append(os.Environ(), harness.ProxaEnv(t, dir)...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)

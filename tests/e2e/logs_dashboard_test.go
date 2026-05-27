@@ -5,35 +5,34 @@ package e2e
 
 import (
 	"bufio"
-	"context"
 	"fmt"
-	"io"
-	"net"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/proxa-server/proxa/tests/e2e/internal/harness"
 )
 
 // TestSC_007_LogsDashboardSSE covers SC-007: the dashboard log viewer
 // page loads + the SSE endpoint returns text/event-stream + data: lines
 // flow within 2 seconds of a request that produces a new log line.
 func TestSC_007_LogsDashboardSSE(t *testing.T) {
+	harness.SCAttrs(t, "006-test-foundation-public-images", "SC-007")
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker CLI not available")
 	}
 
 	dir := t.TempDir()
-	if out, err := runProxa(t, dir, "init"); err != nil {
+	if out, err := harness.RunProxa(t, dir, "init"); err != nil {
 		t.Fatalf("init: %v\n%s", err, out)
 	}
-	stop := startServer(t, dir)
+	stop := harness.StartServer(t, dir)
 	defer stop()
 
-	hostPort, _ := pickTwoFreeTCPPorts(t)
+	hostPort, _ := harness.PickTwoFreeTCPPorts(t)
 	tomlPath := filepath.Join(dir, "logdash.toml")
 	tomlContent := fmt.Sprintf(`
 name     = "logdash"
@@ -51,18 +50,18 @@ protocol  = "http"
 	if err := os.WriteFile(tomlPath, []byte(tomlContent), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := runProxa(t, dir, "up", tomlPath); err != nil {
+	if out, err := harness.RunProxa(t, dir, "up", tomlPath); err != nil {
 		t.Fatalf("up: %v\n%s", err, out)
 	}
 	t.Cleanup(func() {
 		_ = exec.Command("docker", "rm", "-f", "proxa-default-logdash-0").Run()
 	})
-	waitForCount(t, "logdash", 1, 30*time.Second)
+	harness.WaitForCount(t, "logdash", 1, 30*time.Second)
 
-	token := readToken(t, dir)
+	token := harness.ReadToken(t, dir)
 
 	// --- Part 1: /ui/logs page loads with the right markup ---
-	uiBody := getViaSocket(t, dir, token, "/ui/logs/default/logdash")
+	uiBody := harness.GetViaSocket(t, dir, token, "/ui/logs/default/logdash")
 	for _, want := range []string{
 		"📜",
 		"logdash",
@@ -71,12 +70,12 @@ protocol  = "http"
 		"new EventSource",
 	} {
 		if !strings.Contains(uiBody, want) {
-			t.Errorf("/ui/logs page missing %q\n--- snippet ---\n%s", want, snippet(uiBody, 800))
+			t.Errorf("/ui/logs page missing %q\n--- snippet ---\n%s", want, harness.Snippet(uiBody, 800))
 		}
 	}
 
 	// --- Part 2: SSE endpoint returns text/event-stream + data: lines ---
-	resp, body := sseRequest(t, dir, token, "/api/v1/projects/default/services/logdash/logs?follow=true")
+	resp, body := harness.SSERequest(t, dir, token, "/api/v1/projects/default/services/logdash/logs?follow=true")
 	defer resp.Body.Close()
 
 	ct := resp.Header.Get("Content-Type")
@@ -147,57 +146,4 @@ dataLoop:
 	if !gotData {
 		t.Errorf("expected at least one data: line containing 'GET /' within 4s of curl")
 	}
-}
-
-// getViaSocket runs an HTTP GET via the Unix socket and returns the body.
-func getViaSocket(t *testing.T, dir, token, path string) string {
-	t.Helper()
-	client := &http.Client{
-		Timeout: 5 * time.Second,
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				var d net.Dialer
-				return d.DialContext(ctx, "unix", socketPath(t, dir))
-			},
-		},
-	}
-	req, _ := http.NewRequest(http.MethodGet, "http://x"+path, nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatalf("GET %s: %v", path, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		t.Fatalf("GET %s: status %d", path, resp.StatusCode)
-	}
-	b, _ := io.ReadAll(resp.Body)
-	return string(b)
-}
-
-// sseRequest opens a long-lived streaming request via the Unix socket
-// and returns the live response (caller closes resp.Body). Accept header
-// is set to text/event-stream so the server takes the SSE branch.
-func sseRequest(t *testing.T, dir, token, path string) (*http.Response, string) {
-	t.Helper()
-	client := &http.Client{
-		// NO timeout — streaming.
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				var d net.Dialer
-				return d.DialContext(ctx, "unix", socketPath(t, dir))
-			},
-		},
-	}
-	req, _ := http.NewRequest(http.MethodGet, "http://x"+path, nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Accept", "text/event-stream")
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatalf("SSE GET %s: %v", path, err)
-	}
-	if resp.StatusCode != 200 {
-		t.Fatalf("SSE GET %s: status %d", path, resp.StatusCode)
-	}
-	return resp, ""
 }
