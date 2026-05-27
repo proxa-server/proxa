@@ -1,0 +1,17 @@
+# Coverage gate allowlist for `make cover` / `cmd/coverage-gate`.
+#
+# Packages listed here are EXEMPT from the coverage-gate threshold check
+# (currently 60%). They still appear in the coverage report with a `~`
+# prefix so contributors can see what's excluded.
+#
+# Format: one Go import path per line. Comments start with `#`. Blank
+# lines ignored. Glob patterns NOT supported in v0.4.2.
+#
+# When adding an entry, include a short rationale comment above it so
+# future maintainers know why the package is exempt.
+
+# HTML templates package — coverage is meaningless for embedded assets.
+github.com/proxa-server/proxa/internal/web
+
+# Wire-format type definitions — no executable behavior to cover.
+github.com/proxa-server/proxa/pkg/types
