@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proxa · Container Logs</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/htmx.min.js" defer></script>
+<script src="/static/alpine.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="/ui/">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="2" width="20" height="20" rx="6" fill="#2a9d8f" opacity=".15"/>
+      <path d="M7 8h4a3 3 0 0 1 0 6H7V8z" stroke="#2a9d8f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17 8v8" stroke="#2a9d8f" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="17" cy="8" r="1.5" fill="#2a9d8f"/>
+    </svg>
+    <span class="wordmark">Proxa</span>
+    <span class="badge">Container Logs</span>
+  </a>
+  <div class="cluster-status">
+    <a href="/ui/containers" style="color:var(--fg-2);text-decoration:none">← Containers</a>
+  </div>
+</nav>
+
+<div class="container" x-data="hostLogsController({{ .ContainerID }})" x-init="load()">
+
+  <div class="card" style="padding:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h1 style="margin:0;font-size:16px">📄 Logs · <span class="mono" style="font-size:13px;color:var(--fg-3)" x-text="containerID"></span></h1>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label style="font-size:12px;color:var(--fg-3);display:flex;gap:6px;align-items:center">
+          tail
+          <select x-model.number="tail" @change="load()" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px">
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="500">500</option>
+            <option value="1000">1000</option>
+          </select>
+        </label>
+        <button @click="load()" class="chip chip-neutral" style="border:none;cursor:pointer;font-size:12px">🔄 Refresh</button>
+      </div>
+    </div>
+
+    <div x-show="err" x-text="err" style="color:#e63946;margin-bottom:12px"></div>
+    <pre class="mono" x-text="output"
+         style="background:#0d1117;color:#e6edf3;padding:14px;border-radius:6px;font-size:12px;max-height:70vh;overflow:auto;white-space:pre"></pre>
+  </div>
+</div>
+
+<script>
+function hostLogsController(containerID) {
+  return {
+    containerID: containerID,
+    tail: 100,
+    output: '',
+    err: '',
+    async load() {
+      this.err = '';
+      try {
+        const resp = await fetch('/api/v1/host-containers/' + this.containerID + '/logs?tail=' + this.tail, {
+          credentials: 'same-origin',
+        });
+        if (!resp.ok) {
+          this.err = 'load failed: ' + resp.status + ' ' + resp.statusText;
+          return;
+        }
+        this.output = await resp.text();
+      } catch (e) {
+        this.err = 'network error: ' + e.message;
+      }
+    }
+  };
+}
+</script>
+
+</body>
+</html>

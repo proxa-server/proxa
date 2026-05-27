@@ -45,6 +45,10 @@ type Manager struct {
 	ingressHTTPSPort  int
 	ingressTLSEnabled bool
 
+	// events is the optional audit sink for probe.transition events.
+	// nil = silent (test paths). Set via Options.Events.
+	events EventSink
+
 	mu      sync.Mutex
 	entries map[string]*entry
 
@@ -72,6 +76,30 @@ type Options struct {
 	// probe targets IngressHTTPSPort directly to avoid the redirect
 	// loop that broke probes in v0.4.0.
 	IngressTLSEnabled bool
+
+	// Events is the optional audit sink. When set, the Manager emits
+	// one `probe.transition` event on every healthy⇄unhealthy flip
+	// per tracked container. nil = silent (the default — production
+	// `proxa server` wires one in; unit tests usually don't).
+	Events EventSink
+}
+
+// EventSink is the narrow interface probe.Manager needs from the
+// events package — kept as an interface rather than importing
+// *events.Store directly to avoid a package-import cycle in tests
+// that want to swap in a recording sink.
+type EventSink interface {
+	Append(ctx context.Context, e EventRecord) (int64, error)
+}
+
+// EventRecord is the shape probe.Manager hands to the sink. Matches
+// events.Event by intent — but stays local so probe doesn't import
+// events.
+type EventRecord struct {
+	Type    string
+	Actor   string
+	Target  string
+	Payload string
 }
 
 type entry struct {
@@ -100,6 +128,7 @@ func NewWithOptions(rt runtime.Runtime, log *slog.Logger, opts Options) *Manager
 		ingressHTTPPort:   opts.IngressHTTPPort,
 		ingressHTTPSPort:  opts.IngressHTTPSPort,
 		ingressTLSEnabled: opts.IngressTLSEnabled,
+		events:            opts.Events,
 		entries:           make(map[string]*entry),
 		mgrCtx:            ctx,
 		mgrCancel:         cancel,
@@ -319,6 +348,7 @@ func (m *Manager) recordResult(id string, e *entry, r Result, retries int) {
 	switch {
 	case prev.HealthOK != next.HealthOK:
 		m.log.Info("probe: health transition", "container", id, "healthy", next.HealthOK, "streak", streak)
+		m.emitTransition(id, prev.HealthOK, next.HealthOK, streak)
 	case streak == retries:
 		m.log.Warn("probe: streak reached retries", "container", id, "streak", streak, "retries", retries)
 	default:
@@ -354,4 +384,34 @@ func hashSpec(spec types.TaskDef) string {
 		fmt.Fprintf(h, "|e0=%d", spec.Expose[0].Container)
 	}
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+// emitTransition records one probe.transition event in the optional
+// events sink. Best-effort: a sink failure is logged but never
+// propagated — the reconciler must not be blocked by audit-store I/O.
+func (m *Manager) emitTransition(id string, prevHealthy, newHealthy bool, streak int) {
+	if m.events == nil {
+		return
+	}
+	from := "unhealthy"
+	if prevHealthy {
+		from = "healthy"
+	}
+	to := "unhealthy"
+	if newHealthy {
+		to = "healthy"
+	}
+	short := id
+	if len(short) > 12 {
+		short = short[:12]
+	}
+	payload := fmt.Sprintf(`{"from":%q,"to":%q,"streak":%d}`, from, to, streak)
+	if _, err := m.events.Append(m.mgrCtx, EventRecord{
+		Type:    "probe.transition",
+		Actor:   "reconciler",
+		Target:  "container:" + short,
+		Payload: payload,
+	}); err != nil {
+		m.log.Warn("probe: events.Append failed", "container", id, "err", err)
+	}
 }

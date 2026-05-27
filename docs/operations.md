@@ -442,6 +442,38 @@ them docker-socket access. v0.4.4 is intended for single-operator
 homelab deployments. Multi-operator deployments should wait for v0.5
 multi-user RBAC, or restrict token distribution accordingly.
 
+### Host container logs (v0.4.5+)
+
+Operators can tail any container's logs via:
+
+```
+GET /api/v1/host-containers/{id}/logs?tail=100&follow=true
+```
+
+Same query params as the per-service log endpoint (`tail`, `follow`,
+`since` in RFC 3339). Plain text by default; SSE with
+`Accept: text/event-stream`. Works for both managed and unmanaged
+containers — the per-service `/api/v1/projects/{p}/services/{n}/logs`
+remains the preferred path for managed services because it surfaces
+the replica index in the meta envelope.
+
+Dashboard surface: `/ui/logs/host/{id}` (linked from each row in
+`/ui/containers`).
+
+### Probe transition events (v0.4.5+)
+
+The probe manager now emits a `probe.transition` event in the audit
+log every time a container's health flips between healthy and
+unhealthy. Payload schema:
+
+```json
+{"from":"healthy","to":"unhealthy","streak":4}
+```
+
+Useful for answering "when did api start flapping?" without grep'ing
+the structured log stream. Visible in `/ui/events` with the standard
+filters (filter by `container:<short-id>` to scope to one replica).
+
 ## SQLite migrations (v0.4.3+)
 
 `proxa server` runs schema migrations idempotently on every start.
