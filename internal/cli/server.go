@@ -77,23 +77,25 @@ func runServer(ctx context.Context, cfg *config.Config) error {
 	authn := token.New(st)
 	authz := dbpolicy.New(st)
 
-	// Probe manager (health checks per replica). Pass the ingress
-	// HTTP/HTTPS ports + TLS state so probes can opt into via=ingress
-	// and (when TLS is on) bypass the HTTP→HTTPS redirect dance that
-	// broke probes in v0.4.0.
-	probes := probe.NewWithOptions(rt, logger, probe.Options{
-		IngressHTTPPort:   cfg.Ingress.HTTPPort,
-		IngressHTTPSPort:  cfg.Ingress.HTTPSPort,
-		IngressTLSEnabled: cfg.Ingress.TLS,
-	})
-
-	// Ingress (L7/L4 routing layer).
-	ingressCtl := ingress.New(cfg.Ingress, cfg.DataDir, logger)
-
 	// Events store (audit log; v0.4.3+). Layered on the same *sql.DB
 	// as the state store — migration v2 already created the events
 	// table during Migrate above.
 	eventStore := events.NewStore(st.DB())
+
+	// Probe manager (health checks per replica). Pass the ingress
+	// HTTP/HTTPS ports + TLS state so probes can opt into via=ingress
+	// and (when TLS is on) bypass the HTTP→HTTPS redirect dance that
+	// broke probes in v0.4.0. v0.4.5+ also receives the events sink
+	// so probe.Manager can emit probe.transition events.
+	probes := probe.NewWithOptions(rt, logger, probe.Options{
+		IngressHTTPPort:   cfg.Ingress.HTTPPort,
+		IngressHTTPSPort:  cfg.Ingress.HTTPSPort,
+		IngressTLSEnabled: cfg.Ingress.TLS,
+		Events:            probeEventSink{eventStore},
+	})
+
+	// Ingress (L7/L4 routing layer).
+	ingressCtl := ingress.New(cfg.Ingress, cfg.DataDir, logger)
 
 	// Reconciler.
 	recon := reconciler.New(st, rt, reconciler.Options{
@@ -139,4 +141,19 @@ func runServer(ctx context.Context, cfg *config.Config) error {
 	case err := <-errCh:
 		return err
 	}
+}
+
+// probeEventSink adapts the events.Store to the probe.EventSink shape.
+// Lives here (not in probe/) to keep probe free of an events package
+// import. Translates the local EventRecord into the canonical
+// events.Event before persisting.
+type probeEventSink struct{ store *events.Store }
+
+func (s probeEventSink) Append(ctx context.Context, r probe.EventRecord) (int64, error) {
+	return s.store.Append(ctx, events.Event{
+		Type:    r.Type,
+		Actor:   r.Actor,
+		Target:  r.Target,
+		Payload: r.Payload,
+	})
 }
