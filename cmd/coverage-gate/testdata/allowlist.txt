@@ -1,0 +1,7 @@
+# Test allowlist fixture.
+# Comments and blank lines must be ignored.
+
+github.com/proxa-server/proxa/internal/web
+
+# Trailing whitespace tolerated
+github.com/proxa-server/proxa/pkg/types
