@@ -1,0 +1,48 @@
+# syntax=docker/dockerfile:1.7
+#
+# Proxa control-plane image. Used by Goreleaser to build multi-arch
+# images published to ghcr.io/proxa-server/proxa on every release tag.
+#
+# The binary is CGO_ENABLED=0 static (constitution §IV) so FROM scratch
+# is sufficient — no libc, no shell, no package manager. This is the
+# §V "single binary" principle made visible in the image layout.
+#
+# Goreleaser supplies the proxa binary in the build context (it expects
+# the binary as a sibling file to the Dockerfile). OCI image labels
+# (org.opencontainers.image.*) are added by Goreleaser at build time
+# via --label flags; we keep this Dockerfile minimal.
+
+FROM scratch
+
+# Goreleaser sets TARGETOS / TARGETARCH automatically when using
+# buildx; declared here for documentation + correctness of any future
+# multi-stage builds.
+ARG TARGETOS
+ARG TARGETARCH
+
+COPY proxa /usr/local/bin/proxa
+
+# Run as the standard Distroless nonroot UID/GID. Operators can
+# override at runtime with `docker run --user 0:0 ...` if they have a
+# specific reason, but the default is secure.
+USER 65532:65532
+
+# API + dashboard on 8080 by default (configurable via --listen).
+EXPOSE 8080
+
+# Ingress defaults (configurable via [ingress] block in proxa.toml).
+EXPOSE 80
+EXPOSE 443
+
+# Data directory (SQLite + secrets.key + admin token). Mount a named
+# volume here to persist state across container restarts:
+#
+#   docker run -v proxa-data:/data ghcr.io/proxa-server/proxa:vX.Y.Z server
+VOLUME ["/data"]
+
+# Hint for the version package's Distribution detector — avoids a file-
+# stat on the request path inside the container. See internal/version/runtime.go.
+ENV PROXA_DISTRIBUTION=docker
+
+ENTRYPOINT ["/usr/local/bin/proxa"]
+CMD ["server", "--data-dir", "/data"]

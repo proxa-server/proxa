@@ -1,0 +1,45 @@
+# syntax=docker/dockerfile:1.7
+#
+# Proxa worker-node agent image. Goreleaser publishes this to
+# ghcr.io/proxa-server/proxa-agent on every release tag.
+#
+# In v0.4.2 the binary is a STUB — it only implements `version`. The
+# real agent functionality (pull-based mTLS control loop, etc.) lands
+# in v0.5 Multi-host MVP. The image SHAPE is the contract v0.5 will
+# consume; v0.5 only changes the binary contents, not the Dockerfile.
+#
+# Like the control-plane image, agent is FROM scratch — single static
+# binary, no shell, no libc.
+
+FROM scratch
+
+ARG TARGETOS
+ARG TARGETARCH
+
+COPY proxa-agent /usr/local/bin/proxa-agent
+
+USER 65532:65532
+
+# Agent is OUTBOUND-only — it dials the control plane over HTTPS:443.
+# No inbound ports. No EXPOSE. Operator does NOT need to open any
+# firewall rules on the worker node.
+
+# No VOLUME — the operator mounts /var/run/docker.sock from the host at
+# runtime so the agent can drive the local Docker daemon:
+#
+#   docker run -d --restart=always \
+#     -v /var/run/docker.sock:/var/run/docker.sock \
+#     -e PROXA_AGENT_BOOTSTRAP_TOKEN=<token-from-control-plane> \
+#     -e PROXA_AGENT_CONTROL_URL=https://control.example.com \
+#     ghcr.io/proxa-server/proxa-agent:vX.Y.Z connect
+#
+# The mount expectation is captured as an image LABEL for discovery via
+# `docker inspect ghcr.io/proxa-server/proxa-agent:vX.Y.Z`.
+LABEL org.opencontainers.image.documentation="Mount /var/run/docker.sock from host at runtime; agent dials control plane on outbound HTTPS:443."
+
+ENV PROXA_DISTRIBUTION=docker
+
+ENTRYPOINT ["/usr/local/bin/proxa-agent"]
+# No CMD — agent stub only supports `version`; v0.5 will add `connect`
+# (and others) as real subcommands. Operators always pass the subcommand
+# explicitly.
